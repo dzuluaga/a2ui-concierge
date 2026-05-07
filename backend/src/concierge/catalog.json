@@ -183,7 +183,7 @@
     "category": "jewelry",
     "vibe_tags": ["warm", "playful"],
     "price": 148,
-    "image_url": "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80",
+    "image_url": "https://images.unsplash.com/photo-1535553880478-2e90c0a3c4a6?w=600&q=80",
     "description": "An elongated marquise shape hangs from a box chain. Timeless geometry, warm gold finish.",
     "variants": {
       "finish": ["gold", "rose gold"],
@@ -368,7 +368,7 @@
     "id": "lum-skin-005",
     "name": "Exfoliating Toner Pads",
     "category": "skincare",
-    "vibe_tags": ["modern", "minimalist"],
+    "vibe_tags": ["minimalist", "modern"],
     "price": 46,
     "image_url": "https://images.unsplash.com/photo-1612817288484-6f916006741a?w=600&q=80",
     "description": "Pre-soaked cotton rounds with 5% lactic acid and willow bark. Smooth, not stripped.",

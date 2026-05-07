@@ -1,4 +1,5 @@
 from __future__ import annotations
+import copy
 import json
 from functools import lru_cache
 from importlib import resources
@@ -26,11 +27,11 @@ def search(
     if vibe_tags:
         wanted = set(vibe_tags)
         items = [p for p in items if wanted.intersection(p["vibe_tags"])]
-    return items[:limit]
+    return copy.deepcopy(items[:limit])
 
 
 def get(product_id: str) -> dict[str, Any]:
     for p in load_catalog():
         if p["id"] == product_id:
-            return p
+            return copy.deepcopy(p)
     raise KeyError(product_id)
