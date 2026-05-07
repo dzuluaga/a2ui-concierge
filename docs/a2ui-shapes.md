@@ -267,7 +267,7 @@ are grounded in v0.8 primitives; `address` is a pure extension.
 | `fields[].label`        | string         | [SPEC-ish]  | Display label; mirrors v0.8 `CheckBox.label` / `TextField.label`  |
 | `fields[].max_length`   | integer (opt.) | [EXTENSION] | Only for `type: "text"`; no v0.8 equivalent                       |
 
-**Gap — address field:** v0.8 v0.8 does not define an address-aware input.
+**Gap — address field:** v0.8 does not define an address-aware input.
 Our `type: "address"` is a forward-compatible extension. If a future A2UI
 version adds a native address component, the `type` value can be updated without
 changing the rest of the shape.
