@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>A2UI Host Playground</title></head>
+<body>
+  <div id="a2ui-root"></div>
+  <script type="module" src="/src/shim.js"></script>
+  <script type="module">
+    setTimeout(() => window.a2ui.render({
+      component: "chip-group",
+      question: "What does she lean toward?",
+      options: [
+        { value: "jewelry", label: "Jewelry" },
+        { value: "home", label: "Home" }
+      ],
+    }), 200);
+  </script>
+</body>
+</html>

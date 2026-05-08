@@ -1,0 +1,16 @@
+:root {
+  --a2ui-color-bg: #f8f4ed;
+  --a2ui-color-fg: #1b1b1f;
+  --a2ui-color-accent: #5b6cff;
+  --a2ui-color-success: #7ab87a;
+  --a2ui-radius-md: 14px;
+  --a2ui-font-sans: "Inter", system-ui, sans-serif;
+  --a2ui-font-serif: "Fraunces", "Times New Roman", serif;
+}
+
+body {
+  margin: 0;
+  font-family: var(--a2ui-font-sans);
+  color: var(--a2ui-color-fg);
+  background: var(--a2ui-color-bg);
+}
