@@ -37,7 +37,7 @@ To preserve "highest elegance per week," the following are explicitly excluded f
 - Production hardening: rate limiting, abuse handling, observability, error reporting.
 - Multi-agent orchestration or agent handoffs.
 - Deep links to product pages or sharing flows.
-- A fully-native Jetpack Compose A2UI renderer (deferred — see §11).
+- A fully-native Jetpack Compose A2UI renderer (deferred — see §5.2 for the migration path).
 
 ## 4. Hero flow (90-second storyboard)
 

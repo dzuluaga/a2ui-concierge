@@ -3,16 +3,27 @@ import { LitElement, html, css } from "lit";
 export class ConciergeForm extends LitElement {
   static properties = { fields: { type: Array }, values: { state: true } };
   static styles = css`
-    :host { display: block; font-family: var(--a2ui-font-sans); background: #fff; border: 1px solid #e5e7eb; border-radius: var(--a2ui-radius-md); padding: 12px; }
-    .row { margin-bottom: 10px; }
-    .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
-    input, textarea { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font: inherit; }
-    .toggle { display: flex; justify-content: space-between; align-items: center; }
-    .switch { width: 36px; height: 20px; background: #ddd; border-radius: 12px; position: relative; cursor: pointer; }
+    :host { display: block; font-family: var(--a2ui-font-sans); background: #fff; border: 1px solid #ece8e0; border-radius: var(--a2ui-radius-md); padding: 14px; box-shadow: 0 1px 2px rgba(20, 18, 14, 0.04), 0 6px 16px -10px rgba(20, 18, 14, 0.08); }
+    .row { margin-bottom: 12px; }
+    .label { font-size: 11px; color: #8a8790; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px; font-weight: 600; }
+    input, textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #e5e1d8; border-radius: 10px; font: inherit; font-size: 14px; color: #1B1B1F; background: #faf7f1; transition: border-color .15s, background .15s; }
+    input:focus, textarea:focus { outline: none; border-color: var(--a2ui-color-accent); background: #fff; }
+    .toggle { display: flex; justify-content: space-between; align-items: center; padding: 4px 0 6px; }
+    .toggle span { font-size: 14px; color: #1B1B1F; }
+    .switch { width: 38px; height: 22px; background: #d8d4ca; border-radius: 12px; position: relative; cursor: pointer; transition: background .18s; }
     .switch.on { background: var(--a2ui-color-accent); }
-    .knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: transform .15s; }
+    .knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: transform .18s; box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
     .switch.on .knob { transform: translateX(16px); }
-    .cta { padding: 10px 14px; border-radius: 999px; border: 0; background: var(--a2ui-color-accent); color: #fff; font: inherit; cursor: pointer; }
+    .cta { margin-top: 6px; padding: 11px 18px; border-radius: 999px; border: 0; background: var(--a2ui-color-accent); color: #fff; font: inherit; font-weight: 600; font-size: 14px; letter-spacing: .2px; cursor: pointer; box-shadow: 0 4px 12px -4px rgba(91, 108, 255, 0.5); transition: transform .08s; }
+    .cta:active { transform: scale(0.98); }
+    .suggestions { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .pill { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #e5e1d8; border-radius: 12px; background: #faf7f1; color: #1B1B1F; font: inherit; font-size: 13px; line-height: 1.3; text-align: left; cursor: pointer; transition: background .15s, border-color .15s, transform .08s; }
+    .pill:active { transform: scale(0.98); }
+    .pill[aria-pressed="true"] { background: #fff; border-color: var(--a2ui-color-accent); box-shadow: 0 0 0 1px var(--a2ui-color-accent) inset; }
+    .pill .icon { font-size: 14px; }
+    .pill .label-line { font-weight: 600; font-size: 13px; }
+    .pill .addr-line { color: #6b6973; font-size: 12px; margin-top: 2px; }
+    .pill .text { display: flex; flex-direction: column; }
   `;
   constructor() { super(); this.values = {}; }
   render() {
@@ -34,13 +45,26 @@ export class ConciergeForm extends LitElement {
       </div>`;
     }
     if (f.type === "address") {
+      const saved = [
+        { icon: "🏠", label: "Home", addr: "235 Pine St, Brooklyn NY 11201" },
+        { icon: "🏢", label: "Work", addr: "14 Clement St, San Francisco CA 94118" },
+        { icon: "✈️", label: "Mom's place", addr: "402 Mission St, Austin TX 78701" },
+      ];
+      const current = this.values[f.name] || "";
       return html`<div class="row"><div class="label">${f.label}</div>
-        <input list="addrs" placeholder="Start typing…" @input=${e => this._set(f.name, e.target.value)}>
-        <datalist id="addrs">
-          <option value="235 Pine St, Brooklyn NY 11201">
-          <option value="14 Clement St, San Francisco CA 94118">
-          <option value="402 Mission St, Austin TX 78701">
-        </datalist></div>`;
+        <div class="suggestions">
+          ${saved.map(s => html`
+            <button type="button" class="pill" aria-pressed=${current === s.addr}
+                    @click=${() => this._set(f.name, s.addr)}>
+              <span class="icon">${s.icon}</span>
+              <span class="text">
+                <span class="label-line">${s.label}</span>
+                <span class="addr-line">${s.addr}</span>
+              </span>
+            </button>
+          `)}
+        </div>
+      </div>`;
     }
     return html``;
   }

@@ -1,6 +1,12 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  server: {
+    proxy: {
+      "/chat": { target: "http://localhost:8000", changeOrigin: true },
+      "/health": { target: "http://localhost:8000", changeOrigin: true },
+    },
+  },
   build: {
     lib: {
       entry: "src/shim.js",

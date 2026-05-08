@@ -31,7 +31,7 @@
     "category": "jewelry",
     "vibe_tags": ["minimalist", "bold"],
     "price": 142,
-    "image_url": "https://images.unsplash.com/photo-1573408301185-9519f94f05b8?w=600&q=80",
+    "image_url": "https://images.unsplash.com/photo-1597006354775-2955b15ec026?w=600&q=80",
     "description": "A polished open cuff that sits cleanly on the wrist. Adjustable fit, statement presence.",
     "variants": {
       "finish": ["gold", "silver", "brushed silver"],
@@ -95,7 +95,7 @@
     "category": "jewelry",
     "vibe_tags": ["warm", "playful"],
     "price": 88,
-    "image_url": "https://images.unsplash.com/photo-1616578638024-3a608f78b64d?w=600&q=80",
+    "image_url": "https://images.unsplash.com/photo-1735480165343-96034e9528f9?w=600&q=80",
     "description": "Tiny clusters of white sapphires set in gold. Subtle sparkle for every day.",
     "variants": {
       "finish": ["gold", "silver"]
@@ -120,7 +120,7 @@
     "category": "jewelry",
     "vibe_tags": ["minimalist", "warm"],
     "price": 115,
-    "image_url": "https://images.unsplash.com/photo-1575219284035-8f4b9e2a55fb?w=600&q=80",
+    "image_url": "https://images.unsplash.com/photo-1607071997790-7f56c1fe0197?w=600&q=80",
     "description": "Flat oval links in a classic paperclip style. Polished gold, everyday weight.",
     "variants": {
       "finish": ["gold", "silver"],
@@ -133,7 +133,7 @@
     "category": "jewelry",
     "vibe_tags": ["bold", "modern"],
     "price": 189,
-    "image_url": "https://images.unsplash.com/photo-1604326031168-57b7476f8b9a?w=600&q=80",
+    "image_url": "https://images.unsplash.com/photo-1769909953707-31840816c5b3?w=600&q=80",
     "description": "Two delicate chains at different lengths, joined at a single clasp. Effortlessly styled.",
     "variants": {
       "finish": ["gold", "silver"]
@@ -159,7 +159,7 @@
     "category": "jewelry",
     "vibe_tags": ["bold", "modern"],
     "price": 72,
-    "image_url": "https://images.unsplash.com/photo-1622557850710-52e64da1b8ad?w=600&q=80",
+    "image_url": "https://images.unsplash.com/photo-1560577938-a5ed9b19fe12?w=600&q=80",
     "description": "A slim half-hoop that clips to the cartilage without a piercing. Minimal effort, maximum edge.",
     "variants": {
       "finish": ["gold", "silver"]
@@ -183,7 +183,7 @@
     "category": "jewelry",
     "vibe_tags": ["warm", "playful"],
     "price": 148,
-    "image_url": "https://images.unsplash.com/photo-1535553880478-2e90c0a3c4a6?w=600&q=80",
+    "image_url": "https://images.unsplash.com/photo-1588444968576-f8fe92ce56fd?w=600&q=80",
     "description": "An elongated marquise shape hangs from a box chain. Timeless geometry, warm gold finish.",
     "variants": {
       "finish": ["gold", "rose gold"],
@@ -209,7 +209,7 @@
     "category": "home",
     "vibe_tags": ["warm", "nostalgic"],
     "price": 34,
-    "image_url": "https://images.unsplash.com/photo-1602874801006-8f2e9f6b8b48?w=600&q=80",
+    "image_url": "https://images.unsplash.com/photo-1585938517800-6dea260062cf?w=600&q=80",
     "description": "Pure beeswax tapers in pairs. Slow burn, honey-warm glow, no additives.",
     "variants": {
       "height": ["9\"", "12\""],
@@ -246,7 +246,7 @@
     "category": "home",
     "vibe_tags": ["cozy", "warm"],
     "price": 56,
-    "image_url": "https://images.unsplash.com/photo-1608181831718-de7c33de7f28?w=600&q=80",
+    "image_url": "https://images.unsplash.com/photo-1602607203588-d6d0eda790e3?w=600&q=80",
     "description": "Clean-burning soy wax in a glazed ceramic vessel that lives on your shelf long after.",
     "variants": {
       "scent": ["white tea", "vetiver + cedar", "fig + linen", "neroli"]

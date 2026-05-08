@@ -15,7 +15,10 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
-        buildConfigField("String", "BACKEND_BASE_URL", "\"http://10.0.2.2:8000\"")
+        // localhost works on:
+        //   - emulator: maps to host loopback automatically
+        //   - real device: requires `adb reverse tcp:8000 tcp:8000` while USB-connected
+        buildConfigField("String", "BACKEND_BASE_URL", "\"http://localhost:8000\"")
     }
 
     buildFeatures {
