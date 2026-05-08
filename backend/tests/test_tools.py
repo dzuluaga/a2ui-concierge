@@ -35,7 +35,7 @@ def test_present_form_default_includes_three_fields():
 
 
 import pytest
-from concierge.agent import GiftAgent, AgentEvent
+from concierge.agent import GiftAgent
 
 
 class _StubResponse:
