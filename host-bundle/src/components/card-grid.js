@@ -1,9 +1,21 @@
 import { LitElement, html, css } from "lit";
 
 export class CardGrid extends LitElement {
-  static properties = { reasoning: {}, items: { type: Array } };
+  static properties = {
+    section: {},
+    reasoning: {},
+    items: { type: Array },
+  };
   static styles = css`
     :host { display: block; font-family: var(--a2ui-font-sans); }
+    .section {
+      font-family: var(--a2ui-font-serif);
+      font-weight: 600;
+      font-size: 19px;
+      color: #1B1B1F;
+      padding: 0 4px 6px;
+      letter-spacing: -0.01em;
+    }
     .reason { padding: 0 4px 10px; color: #44424a; font-size: 13px; line-height: 1.4; }
     .rail {
       display: flex; gap: 10px;
@@ -26,24 +38,55 @@ export class CardGrid extends LitElement {
     .card:active { transform: scale(0.985); }
     .card img { width: 100%; height: 132px; object-fit: cover; display: block; background: #f4efe6; }
     .body { padding: 10px; }
-    .name { font-family: var(--a2ui-font-serif); font-weight: 600; font-size: 14px; line-height: 1.25; color: #1B1B1F; }
-    .price { font-family: var(--a2ui-font-serif); font-weight: 600; color: #1B1B1F; font-size: 13px; margin-top: 4px; }
+    .name {
+      font-family: var(--a2ui-font-serif);
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 1.25;
+      color: #1B1B1F;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .price-row {
+      display: flex; align-items: baseline; gap: 6px;
+      margin-top: 4px;
+      font-family: var(--a2ui-font-serif);
+    }
+    .price { font-weight: 600; color: #1B1B1F; font-size: 13px; }
+    .price.sale { color: #b6473a; }
+    .price-orig { color: #9a9099; font-size: 11px; text-decoration: line-through; font-weight: 500; }
+    .vendor {
+      color: #6b6973;
+      font-size: 11px;
+      margin-top: 3px;
+      letter-spacing: 0.01em;
+    }
     .why { color: #6b6973; font-size: 12px; margin-top: 6px; line-height: 1.3; }
   `;
   render() {
     return html`
-      <div class="reason">${this.reasoning}</div>
+      ${this.section ? html`<div class="section">${this.section}</div>` : null}
+      ${this.reasoning ? html`<div class="reason">${this.reasoning}</div>` : null}
       <div class="rail">
-        ${this.items.map(p => html`
-          <div class="card" @click=${() => this._tap(p)}>
-            <img src=${p.image_url} alt=${p.name}>
-            <div class="body">
-              <div class="name">${p.name}</div>
-              <div class="price">$${p.price}</div>
-              ${p.why ? html`<div class="why">${p.why}</div>` : null}
+        ${this.items.map(p => {
+          const onSale = p.sale_price != null && p.sale_price < p.price;
+          return html`
+            <div class="card" @click=${() => this._tap(p)}>
+              <img src=${p.image_url} alt=${p.name}>
+              <div class="body">
+                <div class="name">${p.name}</div>
+                <div class="price-row">
+                  <span class="price ${onSale ? "sale" : ""}">$${onSale ? p.sale_price : p.price}</span>
+                  ${onSale ? html`<span class="price-orig">$${p.price}</span>` : null}
+                </div>
+                ${p.vendor ? html`<div class="vendor">${p.vendor}</div>` : null}
+                ${p.why ? html`<div class="why">${p.why}</div>` : null}
+              </div>
             </div>
-          </div>
-        `)}
+          `;
+        })}
       </div>
     `;
   }

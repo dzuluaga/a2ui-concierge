@@ -154,6 +154,8 @@
           case "chip-group": return o.value ? o.value.charAt(0).toUpperCase() + o.value.slice(1) : "Selection";
           case "card-grid":  return o.name || "View item";
           case "product-detail": return `Add ${o.name || "item"} to order`;
+          case "product-detail-followup": return `Tell me more about ${o.name || "this"}`;
+          case "product-detail-visit": return `Visit ${o.vendor || "vendor"}`;
           case "form":       return "Place order";
           case "confirmation-card": return "Confirmed";
           default:           return "Selection";

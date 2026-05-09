@@ -13,15 +13,20 @@ def chips(*, question: str, options: Iterable[tuple[str, str]]) -> dict[str, Any
         "options": [{"value": v, "label": l} for v, l in options],
     }
 
-def products(*, reasoning: str, items: list[dict[str, Any]]) -> dict[str, Any]:
+def products(
+    *, reasoning: str, items: list[dict[str, Any]], section: str | None = None,
+) -> dict[str, Any]:
     return {
         "component": "card-grid",
+        "section": section,
         "reasoning": reasoning,
         "items": [
             {
                 "id": p["id"],
                 "name": p["name"],
                 "price": p["price"],
+                "sale_price": p.get("sale_price"),
+                "vendor": p.get("vendor"),
                 "image_url": p["image_url"],
                 "why": p.get("why", ""),
             }
@@ -36,7 +41,12 @@ def product_detail(*, product: dict[str, Any], variants: dict[str, list[str]]) -
             "id": product["id"],
             "name": product["name"],
             "price": product["price"],
+            "sale_price": product.get("sale_price"),
+            "vendor": product.get("vendor"),
+            "in_stock": product.get("in_stock", True),
             "image_url": product["image_url"],
+            "images": product.get("images") or [product["image_url"]],
+            "description": product.get("description", ""),
         },
         "variant_groups": [
             {"name": name, "options": values, "select": "single"}

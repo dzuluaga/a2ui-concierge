@@ -3,377 +3,749 @@
     "id": "lum-jewel-001",
     "name": "Bar Pendant Necklace",
     "category": "jewelry",
-    "vibe_tags": ["minimalist", "warm"],
+    "vibe_tags": [
+      "minimalist",
+      "warm"
+    ],
     "price": 124,
     "image_url": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80",
     "description": "Brushed silver bar on a delicate chain — effortlessly worn alone or layered.",
     "variants": {
-      "finish": ["gold", "silver", "rose gold"],
-      "length": ["16\"", "18\""]
-    }
+      "finish": [
+        "gold",
+        "silver",
+        "rose gold"
+      ],
+      "length": [
+        "16\"",
+        "18\""
+      ]
+    },
+    "vendor": "Marais Atelier",
+    "in_stock": true,
+    "images": [
+      "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80",
+      "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80"
+    ]
   },
   {
     "id": "lum-jewel-002",
     "name": "Thread Necklace",
     "category": "jewelry",
-    "vibe_tags": ["minimalist", "modern"],
+    "vibe_tags": [
+      "minimalist",
+      "modern"
+    ],
     "price": 89,
     "image_url": "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80",
     "description": "A single gold thread, ultra-fine and endlessly wearable. The perfect everyday layer.",
     "variants": {
-      "finish": ["gold", "silver"],
-      "length": ["14\"", "16\"", "18\""]
-    }
+      "finish": [
+        "gold",
+        "silver"
+      ],
+      "length": [
+        "14\"",
+        "16\"",
+        "18\""
+      ]
+    },
+    "vendor": "Vault Studio",
+    "in_stock": true,
+    "sale_price": 69,
+    "images": [
+      "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80",
+      "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80"
+    ]
   },
   {
     "id": "lum-jewel-003",
     "name": "Open Cuff Bracelet",
     "category": "jewelry",
-    "vibe_tags": ["minimalist", "bold"],
+    "vibe_tags": [
+      "minimalist",
+      "bold"
+    ],
     "price": 142,
     "image_url": "https://images.unsplash.com/photo-1597006354775-2955b15ec026?w=600&q=80",
     "description": "A polished open cuff that sits cleanly on the wrist. Adjustable fit, statement presence.",
     "variants": {
-      "finish": ["gold", "silver", "brushed silver"],
-      "size": ["XS/S", "M/L"]
-    }
+      "finish": [
+        "gold",
+        "silver",
+        "brushed silver"
+      ],
+      "size": [
+        "XS/S",
+        "M/L"
+      ]
+    },
+    "vendor": "Camille",
+    "in_stock": true,
+    "images": [
+      "https://images.unsplash.com/photo-1597006354775-2955b15ec026?w=600&q=80",
+      "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=600&q=80"
+    ]
   },
   {
     "id": "lum-jewel-004",
     "name": "Stacked Ring Set",
     "category": "jewelry",
-    "vibe_tags": ["minimalist", "modern"],
+    "vibe_tags": [
+      "minimalist",
+      "modern"
+    ],
     "price": 98,
     "image_url": "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80",
     "description": "Three slim bands designed to stack. Sold as a set — wear all three or mix by mood.",
     "variants": {
-      "finish": ["gold", "silver", "mixed"],
-      "size": ["5", "6", "7", "8", "9"]
-    }
+      "finish": [
+        "gold",
+        "silver",
+        "mixed"
+      ],
+      "size": [
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ]
+    },
+    "vendor": "Ovist",
+    "in_stock": true
   },
   {
     "id": "lum-jewel-005",
     "name": "Drop Earrings",
     "category": "jewelry",
-    "vibe_tags": ["warm", "modern"],
+    "vibe_tags": [
+      "warm",
+      "modern"
+    ],
     "price": 76,
     "image_url": "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80",
     "description": "Teardrop silhouette in brushed gold. Light enough for all day, refined enough for evening.",
     "variants": {
-      "finish": ["gold", "silver"]
-    }
+      "finish": [
+        "gold",
+        "silver"
+      ]
+    },
+    "vendor": "Pillar & Pine",
+    "in_stock": true
   },
   {
     "id": "lum-jewel-006",
     "name": "Crescent Moon Pendant",
     "category": "jewelry",
-    "vibe_tags": ["minimalist", "natural"],
+    "vibe_tags": [
+      "minimalist",
+      "natural"
+    ],
     "price": 108,
     "image_url": "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=600&q=80",
     "description": "A slender crescent in 14k gold vermeil — celestial without being costume.",
     "variants": {
-      "finish": ["gold", "rose gold"],
-      "length": ["16\"", "18\""]
-    }
+      "finish": [
+        "gold",
+        "rose gold"
+      ],
+      "length": [
+        "16\"",
+        "18\""
+      ]
+    },
+    "vendor": "Brûle",
+    "in_stock": true
   },
   {
     "id": "lum-jewel-007",
     "name": "Signet Ring",
     "category": "jewelry",
-    "vibe_tags": ["bold", "modern"],
+    "vibe_tags": [
+      "bold",
+      "modern"
+    ],
     "price": 165,
     "image_url": "https://images.unsplash.com/photo-1583292650898-7d22cd27ca6f?w=600&q=80",
     "description": "A flat-top signet with a matte face and high-polish band. Personal, architectural.",
     "variants": {
-      "finish": ["gold", "silver"],
-      "size": ["5", "6", "7", "8", "9", "10"]
-    }
+      "finish": [
+        "gold",
+        "silver"
+      ],
+      "size": [
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10"
+      ]
+    },
+    "vendor": "Maris",
+    "in_stock": true
   },
   {
     "id": "lum-jewel-008",
     "name": "Pavé Studs",
     "category": "jewelry",
-    "vibe_tags": ["warm", "playful"],
+    "vibe_tags": [
+      "warm",
+      "playful"
+    ],
     "price": 88,
     "image_url": "https://images.unsplash.com/photo-1735480165343-96034e9528f9?w=600&q=80",
     "description": "Tiny clusters of white sapphires set in gold. Subtle sparkle for every day.",
     "variants": {
-      "finish": ["gold", "silver"]
-    }
+      "finish": [
+        "gold",
+        "silver"
+      ]
+    },
+    "vendor": "Foundry",
+    "in_stock": true,
+    "sale_price": 64,
+    "images": [
+      "https://images.unsplash.com/photo-1735480165343-96034e9528f9?w=600&q=80",
+      "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80"
+    ]
   },
   {
     "id": "lum-jewel-009",
     "name": "Twisted Hoop Earrings",
     "category": "jewelry",
-    "vibe_tags": ["modern", "bold"],
+    "vibe_tags": [
+      "modern",
+      "bold"
+    ],
     "price": 92,
     "image_url": "https://images.unsplash.com/photo-1630019852942-f89202989a59?w=600&q=80",
     "description": "Medium hoops with a single twist detail. Structured but fluid.",
     "variants": {
-      "finish": ["gold", "silver"],
-      "size": ["small", "medium"]
-    }
+      "finish": [
+        "gold",
+        "silver"
+      ],
+      "size": [
+        "small",
+        "medium"
+      ]
+    },
+    "vendor": "Marais Atelier",
+    "in_stock": true
   },
   {
     "id": "lum-jewel-010",
     "name": "Chain Link Bracelet",
     "category": "jewelry",
-    "vibe_tags": ["minimalist", "warm"],
+    "vibe_tags": [
+      "minimalist",
+      "warm"
+    ],
     "price": 115,
     "image_url": "https://images.unsplash.com/photo-1607071997790-7f56c1fe0197?w=600&q=80",
     "description": "Flat oval links in a classic paperclip style. Polished gold, everyday weight.",
     "variants": {
-      "finish": ["gold", "silver"],
-      "length": ["6.5\"", "7\"", "7.5\""]
-    }
+      "finish": [
+        "gold",
+        "silver"
+      ],
+      "length": [
+        "6.5\"",
+        "7\"",
+        "7.5\""
+      ]
+    },
+    "vendor": "Vault Studio",
+    "in_stock": true
   },
   {
     "id": "lum-jewel-011",
     "name": "Layered Collar Necklace",
     "category": "jewelry",
-    "vibe_tags": ["bold", "modern"],
+    "vibe_tags": [
+      "bold",
+      "modern"
+    ],
     "price": 189,
     "image_url": "https://images.unsplash.com/photo-1769909953707-31840816c5b3?w=600&q=80",
     "description": "Two delicate chains at different lengths, joined at a single clasp. Effortlessly styled.",
     "variants": {
-      "finish": ["gold", "silver"]
-    }
+      "finish": [
+        "gold",
+        "silver"
+      ]
+    },
+    "vendor": "Camille",
+    "in_stock": true
   },
   {
     "id": "lum-jewel-012",
     "name": "Birthstone Ring",
     "category": "jewelry",
-    "vibe_tags": ["warm", "natural"],
+    "vibe_tags": [
+      "warm",
+      "natural"
+    ],
     "price": 136,
     "image_url": "https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?w=600&q=80",
     "description": "A single bezel-set stone on a thin band. Choose your month — meaningful, not sentimental.",
     "variants": {
-      "finish": ["gold", "silver"],
-      "stone": ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"],
-      "size": ["5", "6", "7", "8", "9"]
-    }
+      "finish": [
+        "gold",
+        "silver"
+      ],
+      "stone": [
+        "january",
+        "february",
+        "march",
+        "april",
+        "may",
+        "june",
+        "july",
+        "august",
+        "september",
+        "october",
+        "november",
+        "december"
+      ],
+      "size": [
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ]
+    },
+    "vendor": "Ovist",
+    "in_stock": true
   },
   {
     "id": "lum-jewel-013",
     "name": "Ear Cuff",
     "category": "jewelry",
-    "vibe_tags": ["bold", "modern"],
+    "vibe_tags": [
+      "bold",
+      "modern"
+    ],
     "price": 72,
     "image_url": "https://images.unsplash.com/photo-1560577938-a5ed9b19fe12?w=600&q=80",
     "description": "A slim half-hoop that clips to the cartilage without a piercing. Minimal effort, maximum edge.",
     "variants": {
-      "finish": ["gold", "silver"]
-    }
+      "finish": [
+        "gold",
+        "silver"
+      ]
+    },
+    "vendor": "Pillar & Pine",
+    "in_stock": true
   },
   {
     "id": "lum-jewel-014",
     "name": "Beaded Stretch Bracelet",
     "category": "jewelry",
-    "vibe_tags": ["natural", "cozy"],
+    "vibe_tags": [
+      "natural",
+      "cozy"
+    ],
     "price": 58,
     "image_url": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&q=80",
     "description": "Hand-knotted matte stone beads on elastic cord. A grounding presence on the wrist.",
     "variants": {
-      "stone": ["labradorite", "moonstone", "onyx", "amazonite"]
-    }
+      "stone": [
+        "labradorite",
+        "moonstone",
+        "onyx",
+        "amazonite"
+      ]
+    },
+    "vendor": "Brûle",
+    "in_stock": true
   },
   {
     "id": "lum-jewel-015",
     "name": "Marquise Drop Pendant",
     "category": "jewelry",
-    "vibe_tags": ["warm", "playful"],
+    "vibe_tags": [
+      "warm",
+      "playful"
+    ],
     "price": 148,
     "image_url": "https://images.unsplash.com/photo-1588444968576-f8fe92ce56fd?w=600&q=80",
     "description": "An elongated marquise shape hangs from a box chain. Timeless geometry, warm gold finish.",
     "variants": {
-      "finish": ["gold", "rose gold"],
-      "length": ["16\"", "18\"", "20\""]
-    }
+      "finish": [
+        "gold",
+        "rose gold"
+      ],
+      "length": [
+        "16\"",
+        "18\"",
+        "20\""
+      ]
+    },
+    "vendor": "Maris",
+    "in_stock": true
   },
   {
     "id": "lum-home-001",
     "name": "Linen Throw Pillow",
     "category": "home",
-    "vibe_tags": ["natural", "cozy"],
+    "vibe_tags": [
+      "natural",
+      "cozy"
+    ],
     "price": 68,
     "image_url": "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&q=80",
     "description": "Undyed Belgian linen with a knife-edge finish. Textured, tactile, quietly beautiful.",
     "variants": {
-      "size": ["18\"", "20\"", "22\""],
-      "insert": ["included", "cover only"]
-    }
+      "size": [
+        "18\"",
+        "20\"",
+        "22\""
+      ],
+      "insert": [
+        "included",
+        "cover only"
+      ]
+    },
+    "vendor": "Casa Lumen",
+    "in_stock": true
   },
   {
     "id": "lum-home-002",
     "name": "Beeswax Taper Candles",
     "category": "home",
-    "vibe_tags": ["warm", "nostalgic"],
+    "vibe_tags": [
+      "warm",
+      "nostalgic"
+    ],
     "price": 34,
     "image_url": "https://images.unsplash.com/photo-1585938517800-6dea260062cf?w=600&q=80",
     "description": "Pure beeswax tapers in pairs. Slow burn, honey-warm glow, no additives.",
     "variants": {
-      "height": ["9\"", "12\""],
-      "color": ["natural", "ivory", "terracotta", "sage"]
-    }
+      "height": [
+        "9\"",
+        "12\""
+      ],
+      "color": [
+        "natural",
+        "ivory",
+        "terracotta",
+        "sage"
+      ]
+    },
+    "vendor": "Pillar & Pine",
+    "in_stock": true,
+    "images": [
+      "https://images.unsplash.com/photo-1585938517800-6dea260062cf?w=600&q=80",
+      "https://images.unsplash.com/photo-1602607203588-d6d0eda790e3?w=600&q=80"
+    ]
   },
   {
     "id": "lum-home-003",
     "name": "Stoneware Mug",
     "category": "home",
-    "vibe_tags": ["cozy", "natural"],
+    "vibe_tags": [
+      "cozy",
+      "natural"
+    ],
     "price": 42,
     "image_url": "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80",
     "description": "Hand-thrown stoneware with a reactive glaze. Every mug slightly different — that's the point.",
     "variants": {
-      "color": ["ash grey", "ocean", "sand", "moss"]
-    }
+      "color": [
+        "ash grey",
+        "ocean",
+        "sand",
+        "moss"
+      ]
+    },
+    "vendor": "Earthroom",
+    "in_stock": true,
+    "sale_price": 32,
+    "images": [
+      "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80",
+      "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80"
+    ]
   },
   {
     "id": "lum-home-004",
     "name": "Woven Storage Basket",
     "category": "home",
-    "vibe_tags": ["natural", "modern"],
+    "vibe_tags": [
+      "natural",
+      "modern"
+    ],
     "price": 85,
     "image_url": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80",
     "description": "Tightly woven seagrass basket with leather handles. Holds everything, shows nothing.",
     "variants": {
-      "size": ["small", "medium", "large"]
-    }
+      "size": [
+        "small",
+        "medium",
+        "large"
+      ]
+    },
+    "vendor": "Field & Slope",
+    "in_stock": true
   },
   {
     "id": "lum-home-005",
     "name": "Soy Candle in Ceramic Vessel",
     "category": "home",
-    "vibe_tags": ["cozy", "warm"],
+    "vibe_tags": [
+      "cozy",
+      "warm"
+    ],
     "price": 56,
     "image_url": "https://images.unsplash.com/photo-1602607203588-d6d0eda790e3?w=600&q=80",
     "description": "Clean-burning soy wax in a glazed ceramic vessel that lives on your shelf long after.",
     "variants": {
-      "scent": ["white tea", "vetiver + cedar", "fig + linen", "neroli"]
-    }
+      "scent": [
+        "white tea",
+        "vetiver + cedar",
+        "fig + linen",
+        "neroli"
+      ]
+    },
+    "vendor": "Notabene",
+    "in_stock": true
   },
   {
     "id": "lum-stat-001",
     "name": "Archival Ink Rollerball Pen",
     "category": "stationery",
-    "vibe_tags": ["minimalist", "modern"],
+    "vibe_tags": [
+      "minimalist",
+      "modern"
+    ],
     "price": 48,
     "image_url": "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=600&q=80",
     "description": "Machined aluminum body, smooth rollerball tip. Writes like a wish, looks like an object.",
     "variants": {
-      "color": ["matte black", "brushed silver", "navy"]
-    }
+      "color": [
+        "matte black",
+        "brushed silver",
+        "navy"
+      ]
+    },
+    "vendor": "Notabene",
+    "in_stock": true
   },
   {
     "id": "lum-stat-002",
     "name": "Softcover Lay-Flat Journal",
     "category": "stationery",
-    "vibe_tags": ["minimalist", "natural"],
+    "vibe_tags": [
+      "minimalist",
+      "natural"
+    ],
     "price": 32,
     "image_url": "https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=600&q=80",
     "description": "180gsm tomoe river paper, Japanese binding. Lays flat without persuasion.",
     "variants": {
-      "ruling": ["blank", "dot grid", "ruled", "weekly planner"],
-      "cover": ["stone", "natural", "slate"]
-    }
+      "ruling": [
+        "blank",
+        "dot grid",
+        "ruled",
+        "weekly planner"
+      ],
+      "cover": [
+        "stone",
+        "natural",
+        "slate"
+      ]
+    },
+    "vendor": "Letterform Co.",
+    "in_stock": true,
+    "sale_price": 24,
+    "images": [
+      "https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=600&q=80",
+      "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=600&q=80"
+    ]
   },
   {
     "id": "lum-stat-003",
     "name": "Washi Tape Set",
     "category": "stationery",
-    "vibe_tags": ["playful", "natural"],
+    "vibe_tags": [
+      "playful",
+      "natural"
+    ],
     "price": 22,
     "image_url": "https://images.unsplash.com/photo-1586104195538-050b9f74f58e?w=600&q=80",
     "description": "Six rolls of hand-printed washi. Earthy tones, botanical prints, rice paper feel.",
     "variants": {
-      "style": ["botanicals", "geometric", "solid neutrals"]
-    }
+      "style": [
+        "botanicals",
+        "geometric",
+        "solid neutrals"
+      ]
+    },
+    "vendor": "Marble Press",
+    "in_stock": true
   },
   {
     "id": "lum-stat-004",
     "name": "Correspondence Card Set",
     "category": "stationery",
-    "vibe_tags": ["warm", "nostalgic"],
+    "vibe_tags": [
+      "warm",
+      "nostalgic"
+    ],
     "price": 28,
     "image_url": "https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=600&q=80",
     "description": "Heavyweight cotton cards with deckled edges, ten per box. Writing a note becomes the occasion.",
     "variants": {
-      "style": ["blank", "lined", "bordered"],
-      "color": ["cream", "sage", "blush"]
-    }
+      "style": [
+        "blank",
+        "lined",
+        "bordered"
+      ],
+      "color": [
+        "cream",
+        "sage",
+        "blush"
+      ]
+    },
+    "vendor": "Folio",
+    "in_stock": true
   },
   {
     "id": "lum-stat-005",
     "name": "Leather Desk Pad",
     "category": "stationery",
-    "vibe_tags": ["minimalist", "bold"],
+    "vibe_tags": [
+      "minimalist",
+      "bold"
+    ],
     "price": 95,
     "image_url": "https://images.unsplash.com/photo-1593642634315-48f5414c3ad9?w=600&q=80",
     "description": "Full-grain leather desk pad with a suede backing. Ages beautifully, protects better.",
     "variants": {
-      "color": ["tan", "forest", "black"],
-      "size": ["17\" x 12\"", "24\" x 14\""]
-    }
+      "color": [
+        "tan",
+        "forest",
+        "black"
+      ],
+      "size": [
+        "17\" x 12\"",
+        "24\" x 14\""
+      ]
+    },
+    "vendor": "Plain Press",
+    "in_stock": true
   },
   {
     "id": "lum-skin-001",
     "name": "Barrier Repair Serum",
     "category": "skincare",
-    "vibe_tags": ["minimalist", "natural"],
+    "vibe_tags": [
+      "minimalist",
+      "natural"
+    ],
     "price": 78,
     "image_url": "https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=600&q=80",
     "description": "A lightweight serum with ceramides and oat extract. Restores without a residue.",
     "variants": {
-      "size": ["30ml", "50ml"]
-    }
+      "size": [
+        "30ml",
+        "50ml"
+      ]
+    },
+    "vendor": "Coast & Cure",
+    "in_stock": true
   },
   {
     "id": "lum-skin-002",
     "name": "Gentle Cleansing Balm",
     "category": "skincare",
-    "vibe_tags": ["natural", "cozy"],
+    "vibe_tags": [
+      "natural",
+      "cozy"
+    ],
     "price": 54,
     "image_url": "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&q=80",
     "description": "Melts into skin, rinses clean. Jojoba and rosehip, no fragrance.",
     "variants": {
-      "size": ["75ml", "150ml"]
-    }
+      "size": [
+        "75ml",
+        "150ml"
+      ]
+    },
+    "vendor": "Earthroom",
+    "in_stock": true,
+    "sale_price": 42,
+    "images": [
+      "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&q=80",
+      "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=600&q=80"
+    ]
   },
   {
     "id": "lum-skin-003",
     "name": "Mineral SPF 40 Moisturizer",
     "category": "skincare",
-    "vibe_tags": ["minimalist", "modern"],
+    "vibe_tags": [
+      "minimalist",
+      "modern"
+    ],
     "price": 62,
     "image_url": "https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=600&q=80",
     "description": "Reef-safe zinc oxide in a silky daily moisturizer. One step, done.",
     "variants": {
-      "size": ["30ml", "50ml"],
-      "shade": ["clear", "light tint"]
-    }
+      "size": [
+        "30ml",
+        "50ml"
+      ],
+      "shade": [
+        "clear",
+        "light tint"
+      ]
+    },
+    "vendor": "Verra",
+    "in_stock": true
   },
   {
     "id": "lum-skin-004",
     "name": "Overnight Renewal Oil",
     "category": "skincare",
-    "vibe_tags": ["warm", "natural"],
+    "vibe_tags": [
+      "warm",
+      "natural"
+    ],
     "price": 86,
     "image_url": "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=600&q=80",
     "description": "Cold-pressed rosehip, sea buckthorn, and squalane. Wake up different.",
     "variants": {
-      "size": ["15ml", "30ml"]
-    }
+      "size": [
+        "15ml",
+        "30ml"
+      ]
+    },
+    "vendor": "Field & Slope",
+    "in_stock": true
   },
   {
     "id": "lum-skin-005",
     "name": "Exfoliating Toner Pads",
     "category": "skincare",
-    "vibe_tags": ["minimalist", "modern"],
+    "vibe_tags": [
+      "minimalist",
+      "modern"
+    ],
     "price": 46,
     "image_url": "https://images.unsplash.com/photo-1612817288484-6f916006741a?w=600&q=80",
     "description": "Pre-soaked cotton rounds with 5% lactic acid and willow bark. Smooth, not stripped.",
     "variants": {
-      "count": ["30 pads", "60 pads"]
-    }
+      "count": [
+        "30 pads",
+        "60 pads"
+      ]
+    },
+    "vendor": "Coast & Cure",
+    "in_stock": true
   }
 ]

@@ -10,8 +10,16 @@
       ${this.options.map(e=>L`
         <button aria-pressed=${this.selected===e.value} @click=${()=>this._pick(e.value)}>${e.label}</button>
       `)}
-    `}_pick(e){this.selected=e,window.AndroidBridge?.onAction(JSON.stringify({component:`chip-group`,value:e}))}};customElements.define(`a2ui-chip-group`,_e);var ve=class extends J{static properties={reasoning:{},items:{type:Array}};static styles=o`
+    `}_pick(e){this.selected=e,window.AndroidBridge?.onAction(JSON.stringify({component:`chip-group`,value:e}))}};customElements.define(`a2ui-chip-group`,_e);var ve=class extends J{static properties={section:{},reasoning:{},items:{type:Array}};static styles=o`
     :host { display: block; font-family: var(--a2ui-font-sans); }
+    .section {
+      font-family: var(--a2ui-font-serif);
+      font-weight: 600;
+      font-size: 19px;
+      color: #1B1B1F;
+      padding: 0 4px 6px;
+      letter-spacing: -0.01em;
+    }
     .reason { padding: 0 4px 10px; color: #44424a; font-size: 13px; line-height: 1.4; }
     .rail {
       display: flex; gap: 10px;
@@ -34,49 +42,280 @@
     .card:active { transform: scale(0.985); }
     .card img { width: 100%; height: 132px; object-fit: cover; display: block; background: #f4efe6; }
     .body { padding: 10px; }
-    .name { font-family: var(--a2ui-font-serif); font-weight: 600; font-size: 14px; line-height: 1.25; color: #1B1B1F; }
-    .price { font-family: var(--a2ui-font-serif); font-weight: 600; color: #1B1B1F; font-size: 13px; margin-top: 4px; }
+    .name {
+      font-family: var(--a2ui-font-serif);
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 1.25;
+      color: #1B1B1F;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .price-row {
+      display: flex; align-items: baseline; gap: 6px;
+      margin-top: 4px;
+      font-family: var(--a2ui-font-serif);
+    }
+    .price { font-weight: 600; color: #1B1B1F; font-size: 13px; }
+    .price.sale { color: #b6473a; }
+    .price-orig { color: #9a9099; font-size: 11px; text-decoration: line-through; font-weight: 500; }
+    .vendor {
+      color: #6b6973;
+      font-size: 11px;
+      margin-top: 3px;
+      letter-spacing: 0.01em;
+    }
     .why { color: #6b6973; font-size: 12px; margin-top: 6px; line-height: 1.3; }
   `;render(){return L`
-      <div class="reason">${this.reasoning}</div>
+      ${this.section?L`<div class="section">${this.section}</div>`:null}
+      ${this.reasoning?L`<div class="reason">${this.reasoning}</div>`:null}
       <div class="rail">
-        ${this.items.map(e=>L`
-          <div class="card" @click=${()=>this._tap(e)}>
-            <img src=${e.image_url} alt=${e.name}>
-            <div class="body">
-              <div class="name">${e.name}</div>
-              <div class="price">$${e.price}</div>
-              ${e.why?L`<div class="why">${e.why}</div>`:null}
+        ${this.items.map(e=>{let t=e.sale_price!=null&&e.sale_price<e.price;return L`
+            <div class="card" @click=${()=>this._tap(e)}>
+              <img src=${e.image_url} alt=${e.name}>
+              <div class="body">
+                <div class="name">${e.name}</div>
+                <div class="price-row">
+                  <span class="price ${t?`sale`:``}">$${t?e.sale_price:e.price}</span>
+                  ${t?L`<span class="price-orig">$${e.price}</span>`:null}
+                </div>
+                ${e.vendor?L`<div class="vendor">${e.vendor}</div>`:null}
+                ${e.why?L`<div class="why">${e.why}</div>`:null}
+              </div>
             </div>
-          </div>
-        `)}
+          `})}
       </div>
-    `}_tap(e){window.AndroidBridge?.onAction(JSON.stringify({component:`card-grid`,product_id:e.id,name:e.name}))}};customElements.define(`a2ui-card-grid`,ve);var ye=class extends J{static properties={product:{},variant_groups:{type:Array},selection:{state:!0}};static styles=o`
-    :host { display: block; font-family: var(--a2ui-font-sans); background: #fff; border: 1px solid #ece8e0; border-radius: var(--a2ui-radius-md); padding: 14px; box-shadow: 0 1px 2px rgba(20, 18, 14, 0.04), 0 6px 16px -10px rgba(20, 18, 14, 0.08); }
-    img { width: 100%; height: 180px; object-fit: cover; border-radius: 10px; background: #f4efe6; }
-    .name { font-family: var(--a2ui-font-serif); font-weight: 600; font-size: 19px; margin-top: 12px; color: #1B1B1F; line-height: 1.2; }
-    .price { font-family: var(--a2ui-font-serif); font-weight: 600; color: #1B1B1F; font-size: 16px; margin-top: 4px; }
-    .group { margin-top: 12px; }
-    .label { font-size: 11px; color: #8a8790; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px; font-weight: 600; }
-    button { font: inherit; font-size: 13px; padding: 6px 13px; margin: 3px 6px 3px 0; border-radius: 999px; border: 1px solid #e5e1d8; background: #faf7f1; color: #2a2a30; cursor: pointer; transition: background .15s, border-color .15s, transform .08s; }
-    button:active { transform: scale(0.97); }
-    button[aria-pressed="true"] { background: var(--a2ui-color-accent); color: #fff; border-color: var(--a2ui-color-accent); }
-    .cta { margin-top: 14px; padding: 11px 18px; border-radius: 999px; border: 0; background: var(--a2ui-color-accent); color: #fff; font: inherit; font-weight: 600; font-size: 14px; letter-spacing: .2px; cursor: pointer; box-shadow: 0 4px 12px -4px rgba(91, 108, 255, 0.5); transition: transform .08s; }
+    `}_tap(e){window.AndroidBridge?.onAction(JSON.stringify({component:`card-grid`,product_id:e.id,name:e.name}))}};customElements.define(`a2ui-card-grid`,ve);var ye=class extends J{static properties={product:{},variant_groups:{type:Array},selection:{state:!0},activeImage:{state:!0}};static styles=o`
+    :host {
+      display: block;
+      font-family: var(--a2ui-font-sans);
+      background: #fff;
+      border-radius: var(--a2ui-radius-md);
+      overflow: hidden;
+      padding: 0 0 76px;
+      position: relative;
+    }
+    .gallery {
+      position: relative;
+      background: #f4efe6;
+    }
+    .gallery-track {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .gallery-track::-webkit-scrollbar { display: none; }
+    .slide {
+      flex: 0 0 100%;
+      scroll-snap-align: center;
+      width: 100%;
+    }
+    .slide img {
+      width: 100%;
+      height: 240px;
+      object-fit: cover;
+      display: block;
+      background: #f4efe6;
+    }
+    .dots {
+      position: absolute;
+      bottom: 10px;
+      left: 0; right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      pointer-events: none;
+    }
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.55);
+      box-shadow: 0 0 0 1px rgba(20,18,14,0.12);
+    }
+    .dot.active { background: #fff; box-shadow: 0 0 0 1px rgba(20,18,14,0.2); }
+    .body { padding: 16px 16px 0; }
+    .name {
+      font-family: var(--a2ui-font-serif);
+      font-weight: 600;
+      font-size: 22px;
+      line-height: 1.18;
+      letter-spacing: -0.01em;
+      color: #1B1B1F;
+    }
+    .vendor-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 14px;
+      padding: 12px 12px;
+      background: #faf7f1;
+      border-radius: 12px;
+    }
+    .vendor {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .vendor-mark {
+      width: 24px; height: 24px;
+      border-radius: 999px;
+      background: var(--a2ui-color-accent);
+      color: #fff;
+      display: grid; place-items: center;
+      font-family: var(--a2ui-font-serif);
+      font-weight: 700;
+      font-size: 13px;
+      flex: 0 0 auto;
+    }
+    .vendor-text { display: flex; flex-direction: column; min-width: 0; }
+    .vendor-name {
+      font-size: 13px; font-weight: 600; color: #1B1B1F;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .vendor-sub { font-size: 11px; color: #6b6973; }
+    .price-block {
+      display: flex; flex-direction: column; align-items: flex-end; flex: 0 0 auto;
+      font-family: var(--a2ui-font-serif);
+    }
+    .price { font-weight: 600; font-size: 18px; color: #1B1B1F; }
+    .price.sale { color: #b6473a; }
+    .price-orig { font-size: 12px; color: #9a9099; text-decoration: line-through; font-weight: 500; }
+    .description {
+      margin: 14px 16px 0;
+      color: #44424a;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .group { margin: 14px 16px 0; }
+    .label {
+      font-size: 11px; color: #8a8790; text-transform: uppercase;
+      letter-spacing: .8px; margin-bottom: 8px; font-weight: 600;
+    }
+    button.opt {
+      font: inherit; font-size: 13px;
+      padding: 6px 13px; margin: 3px 6px 3px 0;
+      border-radius: 999px; border: 1px solid #e5e1d8;
+      background: #faf7f1; color: #2a2a30;
+      cursor: pointer;
+      transition: background .15s, border-color .15s, transform .08s;
+    }
+    button.opt:active { transform: scale(0.97); }
+    button.opt[aria-pressed="true"] {
+      background: var(--a2ui-color-accent);
+      color: #fff;
+      border-color: var(--a2ui-color-accent);
+    }
+    .actions {
+      display: flex; gap: 10px;
+      margin: 18px 16px 0;
+    }
+    .visit {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid #d8d2c5;
+      color: #1B1B1F;
+      font: inherit;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform .08s, background .15s;
+    }
+    .visit:active { transform: scale(0.98); }
+    .cta {
+      flex: 1.3;
+      padding: 12px 18px;
+      border-radius: 999px;
+      border: 0;
+      background: var(--a2ui-color-accent);
+      color: #fff;
+      font: inherit;
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: .2px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px -4px rgba(91, 108, 255, 0.5);
+      transition: transform .08s;
+    }
     .cta:active { transform: scale(0.98); }
-  `;constructor(){super(),this.selection={}}render(){return L`
-      <img src=${this.product.image_url}>
-      <div class="name">${this.product.name}</div>
-      <div class="price">$${this.product.price}</div>
-      ${this.variant_groups.map(e=>L`
+    .followup {
+      position: absolute;
+      bottom: 14px;
+      right: 14px;
+      padding: 9px 16px;
+      border-radius: 999px;
+      background: #1B1B1F;
+      color: #fff;
+      border: 0;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 6px 18px -6px rgba(20,18,14,0.45);
+      transition: transform .08s;
+    }
+    .followup:active { transform: scale(0.97); }
+  `;constructor(){super(),this.selection={},this.activeImage=0}firstUpdated(){let e=this.renderRoot.querySelector(`.gallery-track`);e&&e.addEventListener(`scroll`,()=>{let t=e.clientWidth||1,n=Math.round(e.scrollLeft/t);n!==this.activeImage&&(this.activeImage=n)},{passive:!0})}render(){let e=this.product||{},t=e.images&&e.images.length?e.images:[e.image_url].filter(Boolean),n=e.vendor||`Lumen Goods`,r=(n[0]||`L`).toUpperCase(),i=e.sale_price!=null&&e.sale_price<e.price;return L`
+      <div class="gallery">
+        <div class="gallery-track">
+          ${t.map(t=>L`
+            <div class="slide"><img src=${t} alt=${e.name||``}></div>
+          `)}
+        </div>
+        ${t.length>1?L`
+          <div class="dots">
+            ${t.map((e,t)=>L`
+              <div class="dot ${t===this.activeImage?`active`:``}"></div>
+            `)}
+          </div>
+        `:null}
+      </div>
+
+      <div class="body">
+        <div class="name">${e.name}</div>
+      </div>
+
+      <div class="vendor-row">
+        <div class="vendor">
+          <div class="vendor-mark">${r}</div>
+          <div class="vendor-text">
+            <div class="vendor-name">${n}</div>
+            <div class="vendor-sub">${e.in_stock===!1?`Out of stock`:`In stock`}</div>
+          </div>
+        </div>
+        <div class="price-block">
+          <span class="price ${i?`sale`:``}">$${i?e.sale_price:e.price}</span>
+          ${i?L`<span class="price-orig">$${e.price}</span>`:null}
+        </div>
+      </div>
+
+      ${e.description?L`<div class="description">${e.description}</div>`:null}
+
+      ${(this.variant_groups||[]).map(e=>L`
         <div class="group">
           <div class="label">${e.name}</div>
           ${e.options.map(t=>L`
-            <button aria-pressed=${this.selection[e.name]===t} @click=${()=>this._pick(e.name,t)}>${t}</button>
+            <button class="opt"
+              aria-pressed=${this.selection[e.name]===t}
+              @click=${()=>this._pick(e.name,t)}>${t}</button>
           `)}
         </div>
       `)}
-      <button class="cta" @click=${this._confirm}>Add to Order</button>
-    `}_pick(e,t){this.selection={...this.selection,[e]:t}}_confirm(){window.AndroidBridge?.onAction(JSON.stringify({component:`product-detail`,product_id:this.product.id,name:this.product.name,variants:this.selection}))}};customElements.define(`a2ui-product-detail`,ye);var be=class extends J{static properties={fields:{type:Array},values:{state:!0}};static styles=o`
+
+      <div class="actions">
+        <button class="visit" @click=${this._visit}>Visit ${n}</button>
+        <button class="cta" @click=${this._confirm}>Add to Order</button>
+      </div>
+
+      <button class="followup" @click=${this._followup}>Follow up</button>
+    `}_pick(e,t){this.selection={...this.selection,[e]:t}}_confirm(){window.AndroidBridge?.onAction(JSON.stringify({component:`product-detail`,product_id:this.product.id,name:this.product.name,variants:this.selection}))}_visit(){window.AndroidBridge?.onAction(JSON.stringify({component:`product-detail-visit`,product_id:this.product.id,name:this.product.name,vendor:this.product.vendor}))}_followup(){window.AndroidBridge?.onAction(JSON.stringify({component:`product-detail-followup`,product_id:this.product.id,name:this.product.name}))}};customElements.define(`a2ui-product-detail`,ye);var be=class extends J{static properties={fields:{type:Array},values:{state:!0}};static styles=o`
     :host { display: block; font-family: var(--a2ui-font-sans); background: #fff; border: 1px solid #ece8e0; border-radius: var(--a2ui-radius-md); padding: 14px; box-shadow: 0 1px 2px rgba(20, 18, 14, 0.04), 0 6px 16px -10px rgba(20, 18, 14, 0.08); }
     .row { margin-bottom: 12px; }
     .label { font-size: 11px; color: #8a8790; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px; font-weight: 600; }

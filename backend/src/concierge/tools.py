@@ -66,10 +66,17 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
     },
     {
         "name": "present_products",
-        "description": "Render up to three product cards as the next agent bubble.",
+        "description": (
+            "Render a horizontal rail of product cards as the next agent bubble. "
+            "Use a short `section` heading (e.g., 'Cozy & Self-Care') when this is "
+            "one of several themed rails in the same response. Pass 4-6 items per "
+            "section. Re-call this tool for each themed group, with a short text "
+            "paragraph between sections."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
+                "section": {"type": "string"},
                 "reasoning": {"type": "string"},
                 "items": {
                     "type": "array",
@@ -79,6 +86,8 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                             "id": {"type": "string"},
                             "name": {"type": "string"},
                             "price": {"type": "number"},
+                            "sale_price": {"type": "number"},
+                            "vendor": {"type": "string"},
                             "image_url": {"type": "string"},
                             "why": {"type": "string"},
                         },
@@ -150,8 +159,19 @@ def run_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             options=[(o["value"], o["label"]) for o in args["options"]],
         )}
     if name == "present_products":
+        # Hydrate items from the catalog so vendor/sale_price/images stay
+        # authoritative even if the model under-specifies fields.
+        hydrated = []
+        for item in args["items"]:
+            try:
+                full = catalog.get(item["id"])
+                hydrated.append({**full, "why": item.get("why", "")})
+            except KeyError:
+                hydrated.append(item)
         return {"_a2ui": a2ui.products(
-            reasoning=args["reasoning"], items=args["items"],
+            section=args.get("section"),
+            reasoning=args["reasoning"],
+            items=hydrated,
         )}
     if name == "present_product_detail":
         product = catalog.get(args["product_id"])

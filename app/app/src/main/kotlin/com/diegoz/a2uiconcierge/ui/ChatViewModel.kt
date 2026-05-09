@@ -23,10 +23,21 @@ class ChatViewModel(private val repo: ChatRepository) : ViewModel() {
     private val _isThinking = MutableStateFlow(false)
     val isThinking: StateFlow<Boolean> = _isThinking.asStateFlow()
 
+    /** When non-null, the chat screen presents a modal bottom sheet hosting this fragment. */
+    private val _productDetail = MutableStateFlow<JsonObject?>(null)
+    val productDetail: StateFlow<JsonObject?> = _productDetail.asStateFlow()
+
     fun onA2uiAction(json: String) {
         val display = humanizeAction(json)
         _messages.update { it + Message.User(UUID.randomUUID().toString(), display) }
+        // Follow-up / Visit dismiss the sheet; "Add to Order" also dismisses
+        // (the next agent step is a form, which renders inline).
+        if (isProductDetailDismiss(json)) _productDetail.value = null
         sendInternal("[ui-action] $json")
+    }
+
+    fun dismissProductDetail() {
+        _productDetail.value = null
     }
 
     fun send(text: String) {
@@ -39,8 +50,10 @@ class ChatViewModel(private val repo: ChatRepository) : ViewModel() {
         viewModelScope.launch {
             _isThinking.value = true
             try {
+                // Each `text` event closes the previous text bubble. Each `a2ui`
+                // event creates a NEW bubble so multi-section responses (prose +
+                // rail + prose + rail) render as separate items in the list.
                 var textBubbleId: String? = null
-                var a2uiBubbleId: String? = null
 
                 repo.send(text).collect { ev ->
                     when (ev) {
@@ -60,17 +73,17 @@ class ChatViewModel(private val repo: ChatRepository) : ViewModel() {
                             }
                         }
                         is AgentEvent.A2ui -> {
-                            if (a2uiBubbleId == null) {
-                                val id = UUID.randomUUID().toString()
-                                a2uiBubbleId = id
-                                _messages.update { it + Message.AgentA2ui(id, listOf(ev.payload)) }
+                            // Start a fresh text bubble next time.
+                            textBubbleId = null
+                            val component = ev.payload["component"]?.jsonPrimitive?.content
+                            if (component == "product-detail") {
+                                _productDetail.value = ev.payload
                             } else {
-                                _messages.update { list ->
-                                    list.map { m ->
-                                        if (m is Message.AgentA2ui && m.id == a2uiBubbleId) {
-                                            m.copy(fragments = m.fragments + ev.payload)
-                                        } else m
-                                    }
+                                _messages.update {
+                                    it + Message.AgentA2ui(
+                                        UUID.randomUUID().toString(),
+                                        listOf(ev.payload),
+                                    )
                                 }
                             }
                         }
@@ -98,9 +111,27 @@ class ChatViewModel(private val repo: ChatRepository) : ViewModel() {
                 val name = obj["name"]?.jsonPrimitive?.content ?: "item"
                 "Add $name to order"
             }
+            "product-detail-followup" -> {
+                val name = obj["name"]?.jsonPrimitive?.content ?: "item"
+                "Tell me more about $name"
+            }
+            "product-detail-visit" -> {
+                val vendor = obj["vendor"]?.jsonPrimitive?.content ?: "vendor"
+                "Visit $vendor"
+            }
             "form" -> "Place order"
             "confirmation-card" -> "Confirmed"
             else -> "Selection"
         }
     } catch (_: Exception) { "Selection" }
+
+    private fun isProductDetailDismiss(json: String): Boolean = try {
+        val obj = Json.parseToJsonElement(json) as? JsonObject
+        when (obj?.get("component")?.jsonPrimitive?.content) {
+            "product-detail",
+            "product-detail-followup",
+            "product-detail-visit" -> true
+            else -> false
+        }
+    } catch (_: Exception) { false }
 }
