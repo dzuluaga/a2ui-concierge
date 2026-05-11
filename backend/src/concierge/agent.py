@@ -15,7 +15,7 @@ from concierge.tools import TOOL_SCHEMAS, run_tool
 #   gemini/gemini-2.5-flash-lite  (cheapest)
 #   openai/gpt-4o-mini            (cheap OpenAI option)
 MODEL = os.getenv("MODEL", "anthropic/claude-haiku-4-5")
-MAX_TOKENS = int(os.getenv("MAX_TOKENS", "768"))
+MAX_TOKENS = int(os.getenv("MAX_TOKENS", "1500"))
 HISTORY_TURN_LIMIT = 12
 
 _IS_ANTHROPIC = MODEL.startswith("anthropic/") or MODEL.startswith("claude-")
@@ -80,7 +80,35 @@ class GiftAgent:
             }]
         return [{"role": "system", "content": SYSTEM_PROMPT}]
 
+    def _sanitize_history(self) -> None:
+        # Drop any assistant(tool_calls) whose tool_call_ids aren't fully
+        # answered by following role:"tool" messages. DeepSeek (and other
+        # OpenAI-compatible providers) reject the request otherwise.
+        cleaned: list[dict[str, Any]] = []
+        i = 0
+        while i < len(self.history):
+            entry = self.history[i]
+            if entry.get("role") == "assistant" and entry.get("tool_calls"):
+                needed = {tc["id"] for tc in entry["tool_calls"]}
+                j = i + 1
+                seen: set[str] = set()
+                while j < len(self.history) and self.history[j].get("role") == "tool":
+                    seen.add(self.history[j].get("tool_call_id"))
+                    j += 1
+                if needed.issubset(seen):
+                    cleaned.append(entry)
+                    cleaned.extend(self.history[i + 1:j])
+                else:
+                    # Orphan: drop the assistant turn + any partial tool msgs.
+                    pass
+                i = j
+            else:
+                cleaned.append(entry)
+                i += 1
+        self.history = cleaned
+
     def _messages_for_call(self) -> list[dict[str, Any]]:
+        self._sanitize_history()
         msgs: list[dict[str, Any]] = self._system() + self.history
         # Cache the running conversation prefix on Anthropic by tagging the
         # last user-role string content as a list-of-blocks with cache_control.
@@ -141,19 +169,36 @@ class GiftAgent:
             self.history.append(assistant_entry)
 
             if choice.finish_reason != "tool_calls" or not tool_calls:
+                # Truncation: emit a chip so the user can resume instead of
+                # being left staring at a half-finished thought.
+                if choice.finish_reason == "length":
+                    yield AgentEvent("a2ui", {
+                        "component": "chip-group",
+                        "question": "There's more — want me to keep going?",
+                        "select": "single",
+                        "options": [
+                            {"value": "continue", "label": "Show me more"},
+                            {"value": "narrow", "label": "Narrow it down"},
+                        ],
+                    })
                 yield AgentEvent("end", None)
                 return
 
-            # Execute tools and append role:"tool" results.
+            # Execute tools and append role:"tool" results. EVERY tool_call_id
+            # must get a response — partial responses are rejected by DeepSeek
+            # and friends. Catch tool errors and surface them as tool content.
             for tc in tool_calls:
-                raw_args = tc.function.arguments
-                args = json.loads(raw_args) if isinstance(raw_args, str) else (raw_args or {})
-                output = run_tool(tc.function.name, args)
-                if "_a2ui" in output:
-                    yield AgentEvent("a2ui", output["_a2ui"])
-                    tool_content = json.dumps({"rendered": True})
-                else:
-                    tool_content = json.dumps(output)
+                try:
+                    raw_args = tc.function.arguments
+                    args = json.loads(raw_args) if isinstance(raw_args, str) else (raw_args or {})
+                    output = run_tool(tc.function.name, args)
+                    if "_a2ui" in output:
+                        yield AgentEvent("a2ui", output["_a2ui"])
+                        tool_content = json.dumps({"rendered": True})
+                    else:
+                        tool_content = json.dumps(output)
+                except Exception as e:
+                    tool_content = json.dumps({"error": f"{type(e).__name__}: {e}"})
                 self.history.append({
                     "role": "tool",
                     "tool_call_id": tc.id,

@@ -28,6 +28,12 @@ class ChatViewModel(private val repo: ChatRepository) : ViewModel() {
     val productDetail: StateFlow<JsonObject?> = _productDetail.asStateFlow()
 
     fun onA2uiAction(json: String) {
+        // Close X on the product-detail gallery is a pure UI dismiss — don't
+        // forward to the agent and don't render a "Selection" user bubble.
+        if (isProductDetailCloseOnly(json)) {
+            _productDetail.value = null
+            return
+        }
         val display = humanizeAction(json)
         _messages.update { it + Message.User(UUID.randomUUID().toString(), display) }
         // Follow-up / Visit dismiss the sheet; "Add to Order" also dismisses
@@ -124,6 +130,11 @@ class ChatViewModel(private val repo: ChatRepository) : ViewModel() {
             else -> "Selection"
         }
     } catch (_: Exception) { "Selection" }
+
+    private fun isProductDetailCloseOnly(json: String): Boolean = try {
+        val obj = Json.parseToJsonElement(json) as? JsonObject
+        obj?.get("component")?.jsonPrimitive?.content == "product-detail-close"
+    } catch (_: Exception) { false }
 
     private fun isProductDetailDismiss(json: String): Boolean = try {
         val obj = Json.parseToJsonElement(json) as? JsonObject

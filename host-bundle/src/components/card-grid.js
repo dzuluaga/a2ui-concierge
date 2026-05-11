@@ -13,19 +13,28 @@ export class CardGrid extends LitElement {
       font-weight: 600;
       font-size: 19px;
       color: #1B1B1F;
-      padding: 0 4px 6px;
+      padding: 0 12px 6px;
       letter-spacing: -0.01em;
     }
-    .reason { padding: 0 4px 10px; color: #44424a; font-size: 13px; line-height: 1.4; }
+    .reason { padding: 0 12px 10px; color: #44424a; font-size: 13px; line-height: 1.4; }
     .rail {
       display: flex; gap: 10px;
       overflow-x: auto; overflow-y: hidden;
       -webkit-overflow-scrolling: touch;
-      scroll-snap-type: x mandatory;
-      scroll-padding-left: 4px;
-      padding: 4px 4px 8px;
-      margin: 0 -4px;
+      /* proximity (not mandatory) — a half-flick lands on the nearest snap
+         instead of rubber-banding hard back; preserves momentum. */
+      scroll-snap-type: x proximity;
+      scroll-snap-stop: always;
+      scroll-padding-inline: 12px;
+      padding: 4px 12px 8px;
+      margin: 0;
       scrollbar-width: none;
+      /* Tell the browser this region is for horizontal panning so the parent
+         LazyColumn's vertical-scroll handler doesn't fight the carousel
+         swipes (and vertical drags still bubble up to it). */
+      touch-action: pan-x;
+      /* Don't let overscroll bubble to the parent and yank the whole list. */
+      overscroll-behavior-x: contain;
     }
     .rail::-webkit-scrollbar { display: none; }
     .card {
@@ -36,7 +45,14 @@ export class CardGrid extends LitElement {
       box-shadow: 0 1px 2px rgba(20, 18, 14, 0.04), 0 6px 16px -10px rgba(20, 18, 14, 0.08);
     }
     .card:active { transform: scale(0.985); }
-    .card img { width: 100%; height: 132px; object-fit: cover; display: block; background: #f4efe6; }
+    .card img {
+      width: 100%; height: 132px; object-fit: cover; display: block;
+      background: #f4efe6;
+      /* Stop image drag-and-drop from cancelling the pan gesture mid-flick. */
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
     .body { padding: 10px; }
     .name {
       font-family: var(--a2ui-font-serif);

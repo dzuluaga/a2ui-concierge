@@ -13,6 +13,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 data class SseEvent(val name: String, val data: String)
 
@@ -42,7 +43,16 @@ internal fun parseSseStream(lines: Sequence<String>): List<SseEvent> {
 
 class HttpChatRepository(private val baseUrl: String) : ChatRepository {
 
-    private val client = OkHttpClient()
+    // SSE keeps a single HTTP connection open for the full agent turn (often
+    // 30-60s with multiple tool calls on DeepSeek/Gemini). The OkHttp default
+    // 10s read timeout fires between streamed events on slow turns; disable
+    // it for reads while keeping connect/write bounded.
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .writeTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(0, TimeUnit.MILLISECONDS)
+        .callTimeout(0, TimeUnit.MILLISECONDS)
+        .build()
     private val json = Json { ignoreUnknownKeys = true }
     private val sessionId = UUID.randomUUID().toString()
 

@@ -13,7 +13,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -134,7 +136,7 @@ fun AgentA2uiBubble(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .padding(vertical = 4.dp)
             .graphicsLayer {
                 scaleX = popScale.value * fadeScale
                 scaleY = popScale.value * fadeScale
@@ -181,6 +183,90 @@ fun AgentA2uiBubble(
             update = { wv ->
                 val lastRendered = wv.tag as? String ?: return@AndroidView
                 if (lastRendered != payload && payload.isNotEmpty()) {
+                    wv.tag = payload
+                    wv.evaluateJavascript("window.a2ui.render($payload);", null)
+                }
+            },
+        )
+    }
+}
+
+/**
+ * Variant of the A2UI host used inside a ModalBottomSheet. Drops the
+ * height-channel animation so the WebView fills the available sheet area and
+ * its own native scrolling handles overflow (carousel + variants + actions
+ * in product-detail can run taller than the sheet). fillMaxSize keeps the
+ * sheet edge-to-edge regardless of content.
+ */
+@SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
+@Composable
+fun A2uiSheetContent(
+    fragment: JsonObject,
+    onAction: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val bridge = remember { A2uiBridge() }
+    val payload = fragment.toString()
+
+    LaunchedEffect(bridge) {
+        for (json in bridge.actions) onAction(json)
+    }
+    // Drain resizes so the channel never blocks; we ignore the values here.
+    LaunchedEffect(bridge) {
+        for (px in bridge.resizes) Unit
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { ctx ->
+                WebView(ctx).apply {
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    isVerticalScrollBarEnabled = true
+                    isNestedScrollingEnabled = true
+                    setBackgroundColor(0)
+                    addJavascriptInterface(bridge, "AndroidBridge")
+                    // The ModalBottomSheet wraps this WebView in a vertical
+                    // drag-to-dismiss handler that aggressively claims any
+                    // gesture once it crosses the touch slop. That kills
+                    // horizontal carousel swipes mid-flick. Tell the parent
+                    // to keep its hands off while a touch is in progress over
+                    // the WebView. Drag-to-dismiss still works via the sheet
+                    // handle above this view.
+                    setOnTouchListener { v, ev ->
+                        when (ev.actionMasked) {
+                            android.view.MotionEvent.ACTION_DOWN ->
+                                v.parent?.requestDisallowInterceptTouchEvent(true)
+                            android.view.MotionEvent.ACTION_UP,
+                            android.view.MotionEvent.ACTION_CANCEL ->
+                                v.parent?.requestDisallowInterceptTouchEvent(false)
+                        }
+                        false
+                    }
+                    webChromeClient = object : WebChromeClient() {
+                        override fun onConsoleMessage(m: ConsoleMessage): Boolean {
+                            Log.d("A2uiSheet",
+                                "${m.messageLevel()} ${m.sourceId()}:${m.lineNumber()}  ${m.message()}")
+                            return true
+                        }
+                    }
+                    webViewClient = object : WebViewClient() {
+                        override fun onPageFinished(view: WebView, url: String?) {
+                            view.evaluateJavascript(
+                                "window.a2ui.applyTheme(${ThemeTokens.asJson()});",
+                                null,
+                            )
+                            view.evaluateJavascript("window.a2ui.render($payload);", null)
+                            view.tag = payload
+                        }
+                    }
+                    loadUrl("file:///android_asset/host.html")
+                }
+            },
+            update = { wv ->
+                val lastRendered = wv.tag as? String ?: return@AndroidView
+                if (lastRendered != payload) {
                     wv.tag = payload
                     wv.evaluateJavascript("window.a2ui.render($payload);", null)
                 }

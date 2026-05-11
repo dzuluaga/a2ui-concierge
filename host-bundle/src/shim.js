@@ -61,22 +61,19 @@ function applyTheme(tokens) {
   }
 }
 
-// Inside an Android WebView the <body> fills the viewport rather than growing
-// with content, so getBoundingClientRect() returns a stale viewport height.
-// Use scrollHeight on #a2ui-root (plus a small floor and 12px breathing room)
-// and observe the root, not the body.
+// Inside an Android WebView the <body> / <html> elements fill the WebView's
+// currently-allocated height regardless of content. That makes
+// body.scrollHeight a high-water mark, not a measurement — taking max() with
+// it creates a feedback loop where the bubble grows to fit the tallest
+// previous component and never shrinks back. Measure only the root div,
+// whose height is the actual rendered Lit component.
 let lastReported = -1;
 function reportSize() {
   const r = root();
   if (!r) return;
-  // The viewport-driven body height is unreliable inside an Android WebView.
-  // Take the max of every plausible content-height signal — whichever is largest
-  // best reflects the actual rendered content.
   const sH = r.scrollHeight;
   const oH = r.offsetHeight;
-  const bsH = document.body.scrollHeight;
-  const dsH = document.documentElement.scrollHeight;
-  const cssH = Math.max(sH, oH, bsH, dsH) + 12;
+  const cssH = Math.max(sH, oH) + 12;
   const cssClamped = Math.max(60, cssH);
   // Convert CSS pixels to device pixels so the Android side's toDp() yields
   // the correct dp value (Compose density divides by devicePixelRatio).

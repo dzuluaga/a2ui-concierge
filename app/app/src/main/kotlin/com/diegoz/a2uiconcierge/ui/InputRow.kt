@@ -3,6 +3,8 @@ package com.diegoz.a2uiconcierge.ui
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -24,7 +26,11 @@ import androidx.compose.ui.unit.dp
 fun InputRow(onSend: (String) -> Unit) {
     var text by remember { mutableStateOf("") }
     Row(
-        modifier = Modifier.fillMaxWidth().padding(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .imePadding()
+            .navigationBarsPadding()
+            .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         OutlinedTextField(

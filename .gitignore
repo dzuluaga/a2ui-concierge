@@ -1,5 +1,6 @@
 .superpowers/
 .worktrees/
+.claude/
 .DS_Store
 *.iml
 .idea/

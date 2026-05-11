@@ -3,15 +3,21 @@ package com.diegoz.a2uiconcierge.ui
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.Surface
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -85,11 +91,13 @@ fun ChatScreen(vm: ChatViewModel) {
             isThinking = isThinking,
             listState = listState,
             onAction = vm::onA2uiAction,
+            onPromptTap = vm::send,
             contentPadding = padding,
         )
     }
 
-    if (productDetail != null) {
+    val sheetFragment = productDetail
+    if (sheetFragment != null) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
             onDismissRequest = { vm.dismissProductDetail() },
@@ -97,9 +105,32 @@ fun ChatScreen(vm: ChatViewModel) {
             containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
             tonalElevation = 0.dp,
+            // Explicit drag handle — the implicit default wasn't rendering
+            // (likely because A2uiSheetContent's fillMaxSize Box is consuming
+            // the entire content slot in the sheet's Column, with the WebView
+            // drawing over where the handle would sit). Wrapping the default
+            // handle in a Surface gives it a guaranteed paint pass above the
+            // WebView background.
+            dragHandle = {
+                // The sheet expands edge-to-edge, so the handle sits at y=0 of
+                // the surface — directly behind the status bar. statusBarsPadding
+                // pushes it down so the capsule is visible.
+                Box(
+                    modifier = Modifier.statusBarsPadding().fillMaxWidth(),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    Surface(
+                        modifier = Modifier.padding(vertical = 10.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.55f),
+                        shape = RoundedCornerShape(50),
+                    ) {
+                        Box(modifier = Modifier.size(width = 36.dp, height = 4.dp))
+                    }
+                }
+            },
         ) {
-            AgentA2uiBubble(
-                fragments = listOfNotNull(productDetail),
+            A2uiSheetContent(
+                fragment = sheetFragment,
                 onAction = vm::onA2uiAction,
             )
         }
@@ -112,12 +143,18 @@ private fun ChatList(
     isThinking: Boolean,
     listState: androidx.compose.foundation.lazy.LazyListState,
     onAction: (String) -> Unit,
+    onPromptTap: (String) -> Unit,
     contentPadding: PaddingValues,
 ) {
     LazyColumn(
         state = listState,
         modifier = Modifier.padding(contentPadding).fillMaxSize(),
     ) {
+        if (messages.isEmpty() && !isThinking) {
+            item(key = "welcome") {
+                WelcomeCard(onPromptTap = onPromptTap)
+            }
+        }
         items(messages, key = { it.id }) { m ->
             Column(
                 modifier = Modifier

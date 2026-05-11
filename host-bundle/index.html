@@ -48,6 +48,14 @@
     .input button { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--a2ui-color-accent); color: #fff; cursor: pointer; font-size: 18px; box-shadow: 0 4px 12px -4px rgba(91, 108, 255, 0.5); transition: transform .08s; display: flex; align-items: center; justify-content: center; }
     .input button:disabled { background: #c9c4d8; box-shadow: none; cursor: default; }
     .input button:active:not(:disabled) { transform: scale(0.95); }
+    .welcome { padding: 24px 8px 8px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+    .welcome-mark { width: 44px; height: 44px; border-radius: 999px; background: var(--a2ui-color-accent); color: #fff; display: grid; place-items: center; font-family: var(--a2ui-font-serif); font-weight: 700; font-size: 20px; box-shadow: 0 6px 18px -8px rgba(91,108,255,0.6); margin-bottom: 4px; }
+    .welcome-title { font-family: var(--a2ui-font-serif); font-weight: 600; font-size: 22px; line-height: 1.2; color: var(--text); }
+    .welcome-sub { font-size: 13px; color: #6b6973; line-height: 1.5; max-width: 320px; }
+    .prompts { display: flex; flex-direction: column; gap: 8px; padding: 18px 4px 0; width: 100%; }
+    .prompt { text-align: left; font: inherit; font-size: 13.5px; color: var(--text); background: #fff; border: 1px solid var(--asst-border); border-radius: 14px; padding: 12px 14px; cursor: pointer; transition: transform .08s, border-color .15s, background .15s; }
+    .prompt:hover { border-color: #d8d2c5; background: #fffdf8; }
+    .prompt:active { transform: scale(0.98); }
     .thinking { display: inline-flex; gap: 5px; padding: 14px 16px; background: #fff; border: 1px solid var(--asst-border); border-radius: 18px; border-bottom-left-radius: 6px; }
     .thinking span { width: 6px; height: 6px; background: #c4c0c8; border-radius: 50%; animation: bounce 1.2s infinite ease-in-out; }
     .thinking span:nth-child(2) { animation-delay: .15s; }
@@ -92,6 +100,42 @@
     const formEl = document.getElementById("form");
 
     const scrollDown = () => requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
+
+    const SAMPLE_PROMPTS = [
+      "Help me find a housewarming gift",
+      "Anniversary gift under $100",
+      "Something thoughtful for my mom",
+      "Gift for a coffee lover",
+    ];
+
+    function renderWelcome() {
+      if (document.getElementById("welcome")) return;
+      const wrap = document.createElement("div");
+      wrap.id = "welcome";
+      wrap.className = "welcome";
+      wrap.innerHTML = `
+        <div class="welcome-mark">L</div>
+        <div class="welcome-title">Hi, I'm Lumen.</div>
+        <div class="welcome-sub">Tell me who you're shopping for and I'll suggest a few thoughtful picks. Try one of these to get started:</div>
+        <div class="prompts"></div>
+      `;
+      const promptsEl = wrap.querySelector(".prompts");
+      for (const text of SAMPLE_PROMPTS) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "prompt";
+        b.textContent = text;
+        b.addEventListener("click", () => {
+          if (sending) return;
+          dismissWelcome();
+          addUserBubble(text);
+          send(text);
+        });
+        promptsEl.appendChild(b);
+      }
+      messagesEl.appendChild(wrap);
+    }
+    const dismissWelcome = () => document.getElementById("welcome")?.remove();
 
     function addUserBubble(text) {
       const row = document.createElement("div");
@@ -166,6 +210,12 @@
     // Same bridge shape Android exposes — components stay 100% unchanged.
     window.AndroidBridge = {
       onAction(json) {
+        // Close X on the product-detail gallery is a pure UI dismiss — don't
+        // echo a user bubble or send anything to the agent.
+        try {
+          const o = JSON.parse(json);
+          if (o.component === "product-detail-close") return;
+        } catch { /* fall through */ }
         addUserBubble(humanize(json));
         send(`[ui-action] ${json}`);
       },
@@ -238,9 +288,12 @@
       const text = inputEl.value.trim();
       if (!text || sending) return;
       inputEl.value = "";
+      dismissWelcome();
       addUserBubble(text);
       send(text);
     });
+
+    renderWelcome();
   </script>
 </body>
 </html>
