@@ -12,6 +12,10 @@ text.
 
 > High-fidelity prototype, not a production app.
 
+## Video demo
+
+▶ **[Watch it on YouTube](https://www.youtube.com/watch?v=eTi_LHUJs5Y)** — ~1-minute walkthrough showing the same A2UI components rendering on Android (Compose + WebView) and the web.
+
 ## What this shows
 
 - **One agent, two surfaces.** Same `/chat` SSE stream feeds an Android app and a web app.
