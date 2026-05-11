@@ -1,10 +1,10 @@
 package com.diegoz.a2uiconcierge
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.diegoz.a2uiconcierge.chat.HttpChatRepository
@@ -12,7 +12,10 @@ import com.diegoz.a2uiconcierge.theme.AppTheme
 import com.diegoz.a2uiconcierge.ui.ChatScreen
 import com.diegoz.a2uiconcierge.ui.ChatViewModel
 
-class MainActivity : ComponentActivity() {
+// FragmentActivity (not the bare ComponentActivity) so BiometricPrompt can
+// attach to our lifecycle; FragmentActivity already extends ComponentActivity
+// so Compose / setContent / viewModels keep working unchanged.
+class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()

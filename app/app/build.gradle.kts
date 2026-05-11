@@ -51,6 +51,9 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.webkit:webkit:1.12.1")
+    // Biometric-bound StrongBox key wrap for the x402 wallet seed.
+    implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.github.jeziellago:compose-markdown:0.5.4")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
