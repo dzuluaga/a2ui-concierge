@@ -14,7 +14,11 @@ text.
 
 ## Video demo
 
-Same A2UI components, two surfaces — no rewrites between them.
+▶ **[On-chain settle — Android, BaseScan, MetaMask, split-screen](https://youtu.be/anR3G4Y1LY0)** — the AI agent pays the wallet on the left with real Base Sepolia USDC, in real time. StrongBox-bound EIP-3009 signing → public x402 facilitator → on-chain confirmation.
+
+[![On-chain split-screen demo](https://img.youtube.com/vi/anR3G4Y1LY0/maxresdefault.jpg)](https://youtu.be/anR3G4Y1LY0)
+
+Earlier walkthroughs (mock settlement) — same Lit components, two surfaces, no rewrites between them:
 
 | [![Android walkthrough](https://img.youtube.com/vi/eTi_LHUJs5Y/maxresdefault.jpg)](https://www.youtube.com/watch?v=eTi_LHUJs5Y) | [![Web walkthrough](https://img.youtube.com/vi/65klmTq2cLQ/maxresdefault.jpg)](https://www.youtube.com/watch?v=65klmTq2cLQ) |
 | :---: | :---: |
