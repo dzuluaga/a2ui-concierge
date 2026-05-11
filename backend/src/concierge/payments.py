@@ -50,6 +50,14 @@ RESOURCE_URL = os.getenv("X402_RESOURCE_URL", "https://lumen-concierge.demo/orde
 USDC_NAME = os.getenv("X402_USDC_NAME", "USDC")
 USDC_VERSION = os.getenv("X402_USDC_VERSION", "2")
 
+# Demo cap: when set, every order's settled total is clamped to this dollar
+# amount, regardless of catalog price. Testnet faucets typically drip 5-10
+# USDC; setting `X402_DEMO_MAX_PRICE=2` means any cart settles inside a
+# single faucet drip without flooding the catalog with $1 SKUs.
+# Off by default — production demos and the mock-settle path keep real prices.
+_demo_cap_raw = os.getenv("X402_DEMO_MAX_PRICE")
+DEMO_MAX_PRICE: float | None = float(_demo_cap_raw) if _demo_cap_raw else None
+
 # USDC has 6 decimals. ``amount_units`` in the challenge is base units, so
 # $1.00 == 1_000_000.
 USDC_DECIMALS = 6
@@ -110,6 +118,10 @@ async def settle(*, order_id: str, signed_envelope: dict[str, Any]) -> dict[str,
     Raises ``ValueError`` if the order is unknown or already settled.
     """
     print(f"[x402] settle request order_id={order_id!r} | _ORDERS keys={list(_ORDERS.keys())}", flush=True)
+    # Surface the signer fields (payer address, signature) so we can confirm
+    # the StrongBox signing produced a real envelope and grab the payer
+    # address to fund on Base Sepolia.
+    print(f"[x402] envelope from={signed_envelope.get('from')!r} to={signed_envelope.get('to')!r} value={signed_envelope.get('value')!r} sig={(signed_envelope.get('signature') or '')[:20]}...", flush=True)
     record = _ORDERS.get(order_id)
     if record is None:
         raise ValueError(f"Unknown order_id: {order_id}")

@@ -164,6 +164,15 @@ def run_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
         line_items: list[tuple[str, float]] = [(product["name"], product_price)]
         if gift_wrap_fee:
             line_items.append(("Gift wrap", gift_wrap_fee))
+        # Demo cap: when running the on-chain x402 path against a testnet
+        # faucet drip, real cart totals quickly exceed available USDC. Set
+        # X402_DEMO_MAX_PRICE=<dollars> to clamp the settled amount; we
+        # replace the line items with a single placeholder so the payment
+        # sheet still balances. Off by default — mock-settle keeps real
+        # prices intact.
+        if payments.DEMO_MAX_PRICE is not None and total > payments.DEMO_MAX_PRICE:
+            total = payments.DEMO_MAX_PRICE
+            line_items = [(f"Lumen Concierge (demo) — {product['name']}", total)]
         ship_date = (date.today() + timedelta(days=4)).strftime("%a, %b %d")
         challenge = payments.build_challenge(
             total_dollars=total,

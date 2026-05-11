@@ -19,7 +19,9 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 
 /**
  * Biometric-bound wallet for the x402 demo.
@@ -134,12 +136,18 @@ class SecureWallet(private val context: Context) {
      * Suspend until the BiometricPrompt authenticates the given Cipher,
      * then return the [Cipher] that was bound to the resulting
      * CryptoObject. Cancellation propagates as a CancellationException.
+     *
+     * BiometricPrompt's constructor + authenticate() must run on the
+     * main thread (it attaches to the activity's fragment manager). The
+     * coroutine that calls into the bridge lives on Dispatchers.IO, so
+     * we hop to Main here and back on resume.
      */
     private suspend fun promptForCipher(
         activity: FragmentActivity,
         cipher: Cipher,
         purpose: String,
-    ): Cipher = suspendCancellableCoroutine { cont ->
+    ): Cipher = withContext(Dispatchers.Main) {
+        suspendCancellableCoroutine { cont ->
         val executor = androidx.core.content.ContextCompat.getMainExecutor(context)
         val prompt = BiometricPrompt(
             activity,
@@ -179,6 +187,7 @@ class SecureWallet(private val context: Context) {
         cont.invokeOnCancellation {
             // BiometricPrompt has no first-class cancel; pass-through is the
             // best we can do. The prompt closes when the activity stops.
+        }
         }
     }
 

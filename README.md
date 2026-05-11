@@ -46,6 +46,12 @@ To enable, add the env vars to `backend/.env`:
 ```shell
 X402_SETTLE_REAL=1
 X402_PAY_TO_ADDRESS=0x...               # recipient wallet you control
+# Demo cap — clamps every cart's settled total to this dollar amount,
+# so a single faucet drip (5-10 USDC) covers many orders. The catalog
+# pricing stays realistic; only the on-chain amount is capped. Off by
+# default; recommended for testnet demos.
+X402_DEMO_MAX_PRICE=2
+
 # Optional overrides:
 # X402_NETWORK=base-sepolia
 # X402_CHAIN_ID=84532
