@@ -44,11 +44,12 @@ class ChatViewModel(private val repo: ChatRepository) : ViewModel() {
             _txDetail.value = parseToObject(json)?.let { buildTxDetailFragment(it) }
             return
         }
-        // Close X on the product-detail gallery is a pure UI dismiss — don't
+        // Close X on any of the modal sheets is a pure UI dismiss — don't
         // forward to the agent and don't render a "Selection" user bubble.
-        if (isProductDetailCloseOnly(json)) {
-            _productDetail.value = null
-            return
+        when (componentOf(json)) {
+            "product-detail-close" -> { _productDetail.value = null; return }
+            "payment-challenge-close" -> { _paymentChallenge.value = null; return }
+            "tx-detail-close" -> { _txDetail.value = null; return }
         }
         // `payment-completed` arrives after a successful settle. Dismiss the
         // payment sheet immediately; the agent will render the confirmation.
@@ -164,10 +165,10 @@ class ChatViewModel(private val repo: ChatRepository) : ViewModel() {
         obj?.get("component")?.jsonPrimitive?.content == "payment-completed"
     } catch (_: Exception) { false }
 
-    private fun isProductDetailCloseOnly(json: String): Boolean = try {
-        val obj = Json.parseToJsonElement(json) as? JsonObject
-        obj?.get("component")?.jsonPrimitive?.content == "product-detail-close"
-    } catch (_: Exception) { false }
+    private fun componentOf(json: String): String? = try {
+        (Json.parseToJsonElement(json) as? JsonObject)
+            ?.get("component")?.jsonPrimitive?.content
+    } catch (_: Exception) { null }
 
     private fun isProductDetailDismiss(json: String): Boolean = try {
         val obj = Json.parseToJsonElement(json) as? JsonObject

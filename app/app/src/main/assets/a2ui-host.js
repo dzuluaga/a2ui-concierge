@@ -437,6 +437,7 @@
     `}_openTxDetail(){let e={component:`tx-detail-open`,order_id:this.order_id,tx_hash:this.tx_hash,explorer_url:this.explorer_url,items:this.items,total:this.total,ship_date:this.ship_date};window.AndroidBridge?.onAction?window.AndroidBridge.onAction(JSON.stringify(e)):this.explorer_url&&window.open(this.explorer_url,`_blank`,`noreferrer`)}};customElements.define(`a2ui-confirmation-card`,xe);var Se=class extends J{static properties={order_id:{},label:{},amount_display:{},items:{type:Array},challenge:{type:Object},status:{state:!0},error:{state:!0}};static styles=o`
     :host {
       display: block;
+      position: relative;
       font-family: var(--a2ui-font-sans);
       background: #fff;
       border: 1px solid #ece8e0;
@@ -444,6 +445,18 @@
       padding: 16px;
       box-shadow: 0 1px 2px rgba(20,18,14,0.04), 0 6px 16px -10px rgba(20,18,14,0.08);
     }
+    .close {
+      position: absolute;
+      top: 10px; right: 10px;
+      width: 32px; height: 32px;
+      border-radius: 999px; border: 0;
+      background: #f4efe6; color: #1B1B1F;
+      font: inherit; font-size: 15px; line-height: 1;
+      display: grid; place-items: center;
+      cursor: pointer; z-index: 2;
+      transition: transform .08s, background .15s;
+    }
+    .close:active { transform: scale(0.94); background: #ece8e0; }
     .badge {
       display: inline-block;
       background: #f0eef9; color: #4a3aa0;
@@ -475,6 +488,7 @@
     .err { margin-top: 10px; font-size: 12px; color: #b22; }
     .dot { width: 8px; height: 8px; border-radius: 999px; background: #5B6CFF; box-shadow: 0 0 0 4px rgba(91,108,255,0.18); }
   `;constructor(){super(),this.status=`idle`,this.error=``}render(){return L`
+      <button class="close" aria-label="Close" @click=${this._close}>✕</button>
       <div class="badge">x402 · USDC payment</div>
       <div class="label">${this.label||`Confirm payment`}</div>
       <div class="meta">${this.challenge?.network||``} · ${this.amount_display}</div>
@@ -499,15 +513,28 @@
         On Android, this taps the StrongBox-backed wallet for a hardware-signed
         EIP-3009 authorization. On the web, settlement is mocked for the demo.
       </div>
-    `}async _pay(){if(!(this.status!==`idle`&&this.status!==`error`)){this.status=`paying`,this.error=``;try{let e={scheme:`exact`,kind:`stub-web`,order_id:this.order_id,nonce:this.challenge?.nonce},t=await this._settle(e);this.status=`done`,window.AndroidBridge?.onAction(JSON.stringify({component:`payment-completed`,order_id:this.order_id,tx_hash:t.tx_hash,explorer_url:t.explorer_url}))}catch(e){this.status=`error`,this.error=e.message||String(e)}}}async _settle(e){if(window.AndroidBridge?.settle)return new Promise((t,n)=>{let r=`__settle_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;window[r]=e=>{if(delete window[r],!e)return n(Error(`empty bridge response`));if(e.error)return n(Error(e.error));t(e)};try{window.AndroidBridge.settle(this.order_id,JSON.stringify(e),r)}catch(e){delete window[r],n(e)}});let t=await fetch(`/x402/settle`,{method:`POST`,headers:{"content-type":`application/json`},body:JSON.stringify({order_id:this.order_id,envelope:e})});if(!t.ok){let e=await t.text().catch(()=>``);throw Error(`HTTP ${t.status}: ${e}`)}return await t.json()}};customElements.define(`a2ui-payment-challenge`,Se);var Ce=class extends J{static properties={order_id:{},tx_hash:{},explorer_url:{},network:{},amount_display:{},total:{type:Number},items:{type:Array},ship_date:{},pay_to:{}};static styles=o`
+    `}_close(){window.AndroidBridge?.onAction(JSON.stringify({component:`payment-challenge-close`}))}async _pay(){if(!(this.status!==`idle`&&this.status!==`error`)){this.status=`paying`,this.error=``;try{let e={scheme:`exact`,kind:`stub-web`,order_id:this.order_id,nonce:this.challenge?.nonce},t=await this._settle(e);this.status=`done`,window.AndroidBridge?.onAction(JSON.stringify({component:`payment-completed`,order_id:this.order_id,tx_hash:t.tx_hash,explorer_url:t.explorer_url}))}catch(e){this.status=`error`,this.error=e.message||String(e)}}}async _settle(e){if(window.AndroidBridge?.settle)return new Promise((t,n)=>{let r=`__settle_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;window[r]=e=>{if(delete window[r],!e)return n(Error(`empty bridge response`));if(e.error)return n(Error(e.error));t(e)};try{window.AndroidBridge.settle(this.order_id,JSON.stringify(e),r)}catch(e){delete window[r],n(e)}});let t=await fetch(`/x402/settle`,{method:`POST`,headers:{"content-type":`application/json`},body:JSON.stringify({order_id:this.order_id,envelope:e})});if(!t.ok){let e=await t.text().catch(()=>``);throw Error(`HTTP ${t.status}: ${e}`)}return await t.json()}};customElements.define(`a2ui-payment-challenge`,Se);var Ce=class extends J{static properties={order_id:{},tx_hash:{},explorer_url:{},network:{},amount_display:{},total:{type:Number},items:{type:Array},ship_date:{},pay_to:{}};static styles=o`
     :host {
       display: block;
+      position: relative;
       font-family: var(--a2ui-font-sans);
       background: #fff;
       border-radius: var(--a2ui-radius-md);
       padding: 4px 18px 24px;
       color: #1B1B1F;
     }
+    .close {
+      position: absolute;
+      top: 10px; right: 10px;
+      width: 32px; height: 32px;
+      border-radius: 999px; border: 0;
+      background: #f4efe6; color: #1B1B1F;
+      font: inherit; font-size: 15px; line-height: 1;
+      display: grid; place-items: center;
+      cursor: pointer; z-index: 2;
+      transition: transform .08s, background .15s;
+    }
+    .close:active { transform: scale(0.94); background: #ece8e0; }
     .header {
       display: flex; flex-direction: column; align-items: center;
       padding: 12px 0 18px; gap: 8px;
@@ -570,6 +597,7 @@
     .basescan:active { transform: scale(0.98); background: #faf7f1; }
     .meta { font-size: 11px; color: #8a8790; margin-top: 14px; text-align: center; line-height: 1.5; }
   `;constructor(){super(),this.network=`base-sepolia`,this._copied=!1}render(){let e=this.tx_hash?`${this.tx_hash.slice(0,10)}…${this.tx_hash.slice(-8)}`:`—`,t=this.network===`base-sepolia`?`Base Sepolia (testnet)`:this.network,n=this.amount_display||(this.total==null?`—`:`$${this.total}`);return L`
+      <button class="close" aria-label="Close" @click=${this._close}>✕</button>
       <div class="header">
         <div class="status-mark">✓</div>
         <div class="status">Payment confirmed</div>
@@ -618,4 +646,4 @@
 
       <div class="meta">Settled via x402 ${this.network===`base-sepolia`?`on Base Sepolia testnet`:``}.
         Hardware-signed authorizations are bound to a single nonce and deadline.</div>
-    `}async _copy(){if(this.tx_hash)try{await navigator.clipboard?.writeText(this.tx_hash),this._copied=!0,this.requestUpdate(),setTimeout(()=>{this._copied=!1,this.requestUpdate()},1400)}catch{}}};customElements.define(`a2ui-tx-detail`,Ce);var we={"chip-group":`a2ui-chip-group`,"card-grid":`a2ui-card-grid`,"product-detail":`a2ui-product-detail`,form:`a2ui-form`,"confirmation-card":`a2ui-confirmation-card`,"payment-challenge":`a2ui-payment-challenge`,"tx-detail":`a2ui-tx-detail`};function Y(){return document.getElementById(`a2ui-root`)}function X(e){window.AndroidBridge?.log&&window.AndroidBridge.log(e)}async function Te(e){let t=Y();if(!t)return;X(`render: component=${e.component}`),Z=-1,t.innerHTML=``;let n=we[e.component];if(!n){t.textContent=`unknown component: ${e.component}`,Q();return}let r=document.createElement(n);for(let[t,n]of Object.entries(e))t!==`component`&&(r[t]=n);t.appendChild(r),r.updateComplete&&await r.updateComplete,Q(),r.addEventListener(`load`,Q,!0),r.addEventListener(`error`,Q,!0);let i=0,a=setInterval(()=>{Q(),++i>10&&clearInterval(a)},80)}function Ee(e){for(let[t,n]of Object.entries(e))document.documentElement.style.setProperty(`--a2ui-${t}`,n)}var Z=-1;function Q(){let e=Y();if(!e)return;let t=e.scrollHeight,n=e.offsetHeight,r=Math.max(t,n)+12,i=Math.max(60,r),a=window.devicePixelRatio||1,o=Math.ceil(i*a);X(`reportSize: sH=${t} oH=${n} cssH=${i} dpr=${a} -> ${o}px`),o!==Z&&(Z=o,window.AndroidBridge?.onResize&&window.AndroidBridge.onResize(o),window.parent?.postMessage({type:`a2ui:resize`,height:o},`*`))}var $=()=>{let e=Y();e&&new ResizeObserver(Q).observe(e)};document.readyState===`loading`?document.addEventListener(`DOMContentLoaded`,$,{once:!0}):$(),window.a2ui={render:Te,applyTheme:Ee}})();
+    `}_close(){window.AndroidBridge?.onAction(JSON.stringify({component:`tx-detail-close`}))}async _copy(){if(this.tx_hash)try{await navigator.clipboard?.writeText(this.tx_hash),this._copied=!0,this.requestUpdate(),setTimeout(()=>{this._copied=!1,this.requestUpdate()},1400)}catch{}}};customElements.define(`a2ui-tx-detail`,Ce);var we={"chip-group":`a2ui-chip-group`,"card-grid":`a2ui-card-grid`,"product-detail":`a2ui-product-detail`,form:`a2ui-form`,"confirmation-card":`a2ui-confirmation-card`,"payment-challenge":`a2ui-payment-challenge`,"tx-detail":`a2ui-tx-detail`};function Y(){return document.getElementById(`a2ui-root`)}function X(e){window.AndroidBridge?.log&&window.AndroidBridge.log(e)}async function Te(e){let t=Y();if(!t)return;X(`render: component=${e.component}`),Z=-1,t.innerHTML=``;let n=we[e.component];if(!n){t.textContent=`unknown component: ${e.component}`,Q();return}let r=document.createElement(n);for(let[t,n]of Object.entries(e))t!==`component`&&(r[t]=n);t.appendChild(r),r.updateComplete&&await r.updateComplete,Q(),r.addEventListener(`load`,Q,!0),r.addEventListener(`error`,Q,!0);let i=0,a=setInterval(()=>{Q(),++i>10&&clearInterval(a)},80)}function Ee(e){for(let[t,n]of Object.entries(e))document.documentElement.style.setProperty(`--a2ui-${t}`,n)}var Z=-1;function Q(){let e=Y();if(!e)return;let t=e.scrollHeight,n=e.offsetHeight,r=Math.max(t,n)+12,i=Math.max(60,r),a=window.devicePixelRatio||1,o=Math.ceil(i*a);X(`reportSize: sH=${t} oH=${n} cssH=${i} dpr=${a} -> ${o}px`),o!==Z&&(Z=o,window.AndroidBridge?.onResize&&window.AndroidBridge.onResize(o),window.parent?.postMessage({type:`a2ui:resize`,height:o},`*`))}var $=()=>{let e=Y();e&&new ResizeObserver(Q).observe(e)};document.readyState===`loading`?document.addEventListener(`DOMContentLoaded`,$,{once:!0}):$(),window.a2ui={render:Te,applyTheme:Ee}})();

@@ -23,12 +23,25 @@ export class TxDetail extends LitElement {
   static styles = css`
     :host {
       display: block;
+      position: relative;
       font-family: var(--a2ui-font-sans);
       background: #fff;
       border-radius: var(--a2ui-radius-md);
       padding: 4px 18px 24px;
       color: #1B1B1F;
     }
+    .close {
+      position: absolute;
+      top: 10px; right: 10px;
+      width: 32px; height: 32px;
+      border-radius: 999px; border: 0;
+      background: #f4efe6; color: #1B1B1F;
+      font: inherit; font-size: 15px; line-height: 1;
+      display: grid; place-items: center;
+      cursor: pointer; z-index: 2;
+      transition: transform .08s, background .15s;
+    }
+    .close:active { transform: scale(0.94); background: #ece8e0; }
     .header {
       display: flex; flex-direction: column; align-items: center;
       padding: 12px 0 18px; gap: 8px;
@@ -104,6 +117,7 @@ export class TxDetail extends LitElement {
     const totalLabel = this.amount_display || (this.total != null ? `$${this.total}` : "—");
 
     return html`
+      <button class="close" aria-label="Close" @click=${this._close}>✕</button>
       <div class="header">
         <div class="status-mark">✓</div>
         <div class="status">Payment confirmed</div>
@@ -153,6 +167,12 @@ export class TxDetail extends LitElement {
       <div class="meta">Settled via x402 ${this.network === "base-sepolia" ? "on Base Sepolia testnet" : ""}.
         Hardware-signed authorizations are bound to a single nonce and deadline.</div>
     `;
+  }
+
+  _close() {
+    window.AndroidBridge?.onAction(JSON.stringify({
+      component: "tx-detail-close",
+    }));
   }
 
   async _copy() {

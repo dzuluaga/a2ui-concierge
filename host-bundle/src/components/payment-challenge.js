@@ -23,6 +23,7 @@ export class PaymentChallenge extends LitElement {
   static styles = css`
     :host {
       display: block;
+      position: relative;
       font-family: var(--a2ui-font-sans);
       background: #fff;
       border: 1px solid #ece8e0;
@@ -30,6 +31,18 @@ export class PaymentChallenge extends LitElement {
       padding: 16px;
       box-shadow: 0 1px 2px rgba(20,18,14,0.04), 0 6px 16px -10px rgba(20,18,14,0.08);
     }
+    .close {
+      position: absolute;
+      top: 10px; right: 10px;
+      width: 32px; height: 32px;
+      border-radius: 999px; border: 0;
+      background: #f4efe6; color: #1B1B1F;
+      font: inherit; font-size: 15px; line-height: 1;
+      display: grid; place-items: center;
+      cursor: pointer; z-index: 2;
+      transition: transform .08s, background .15s;
+    }
+    .close:active { transform: scale(0.94); background: #ece8e0; }
     .badge {
       display: inline-block;
       background: #f0eef9; color: #4a3aa0;
@@ -70,6 +83,7 @@ export class PaymentChallenge extends LitElement {
 
   render() {
     return html`
+      <button class="close" aria-label="Close" @click=${this._close}>✕</button>
       <div class="badge">x402 · USDC payment</div>
       <div class="label">${this.label || "Confirm payment"}</div>
       <div class="meta">${this.challenge?.network || ""} · ${this.amount_display}</div>
@@ -97,6 +111,12 @@ export class PaymentChallenge extends LitElement {
         EIP-3009 authorization. On the web, settlement is mocked for the demo.
       </div>
     `;
+  }
+
+  _close() {
+    window.AndroidBridge?.onAction(JSON.stringify({
+      component: "payment-challenge-close",
+    }));
   }
 
   async _pay() {

@@ -250,8 +250,12 @@
         // Pure UI actions — don't echo a user bubble or send to the agent.
         try {
           const o = JSON.parse(json);
-          // Close X on the product-detail gallery is a pure UI dismiss.
-          if (o.component === "product-detail-close") return;
+          // Close X on any modal-sheet component is a pure UI dismiss.
+          if (
+            o.component === "product-detail-close" ||
+            o.component === "payment-challenge-close" ||
+            o.component === "tx-detail-close"
+          ) return;
           // Confirmation-card tx-detail tap: Android pops a modal sheet; on the
           // web we have no chat-level sheet system, so open the explorer in a
           // new tab.
