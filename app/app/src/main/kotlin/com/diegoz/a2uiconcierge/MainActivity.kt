@@ -7,10 +7,13 @@ import androidx.activity.viewModels
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.diegoz.a2uiconcierge.chat.HttpChatRepository
+import com.diegoz.a2uiconcierge.credential.CredentialService
 import com.diegoz.a2uiconcierge.theme.AppTheme
 import com.diegoz.a2uiconcierge.ui.ChatScreen
 import com.diegoz.a2uiconcierge.ui.ChatViewModel
+import kotlinx.coroutines.launch
 
 // FragmentActivity (not the bare ComponentActivity) so BiometricPrompt can
 // attach to our lifecycle; FragmentActivity already extends ComponentActivity
@@ -28,6 +31,18 @@ class MainActivity : FragmentActivity() {
             }
         }
         val vm: ChatViewModel by viewModels { factory }
+        val credentialService = CredentialService()
+
+        lifecycleScope.launch {
+            vm.credentialRequest.collect { data ->
+                val result = credentialService.requestCredential(this@MainActivity, data.dcqlQueryJson)
+                vm.submitCredential(
+                    credentialToken = result.token,
+                    dcqlQueryJson = if (result.token != null) data.dcqlQueryJson else null,
+                )
+            }
+        }
+
         setContent {
             AppTheme {
                 ChatScreen(vm)

@@ -9,7 +9,7 @@
     ],
     "price": 124,
     "image_url": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80",
-    "description": "Brushed silver bar on a delicate chain — effortlessly worn alone or layered.",
+    "description": "Brushed silver bar on a delicate chain \u2014 effortlessly worn alone or layered.",
     "variants": {
       "finish": [
         "gold",
@@ -97,7 +97,7 @@
     ],
     "price": 98,
     "image_url": "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80",
-    "description": "Three slim bands designed to stack. Sold as a set — wear all three or mix by mood.",
+    "description": "Three slim bands designed to stack. Sold as a set \u2014 wear all three or mix by mood.",
     "variants": {
       "finish": [
         "gold",
@@ -145,7 +145,7 @@
     ],
     "price": 108,
     "image_url": "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=600&q=80",
-    "description": "A slender crescent in 14k gold vermeil — celestial without being costume.",
+    "description": "A slender crescent in 14k gold vermeil \u2014 celestial without being costume.",
     "variants": {
       "finish": [
         "gold",
@@ -156,7 +156,7 @@
         "18\""
       ]
     },
-    "vendor": "Brûle",
+    "vendor": "Br\u00fble",
     "in_stock": true
   },
   {
@@ -189,7 +189,7 @@
   },
   {
     "id": "lum-jewel-008",
-    "name": "Pavé Studs",
+    "name": "Pav\u00e9 Studs",
     "category": "jewelry",
     "vibe_tags": [
       "warm",
@@ -291,7 +291,7 @@
     ],
     "price": 136,
     "image_url": "https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?w=600&q=80",
-    "description": "A single bezel-set stone on a thin band. Choose your month — meaningful, not sentimental.",
+    "description": "A single bezel-set stone on a thin band. Choose your month \u2014 meaningful, not sentimental.",
     "variants": {
       "finish": [
         "gold",
@@ -361,7 +361,7 @@
         "amazonite"
       ]
     },
-    "vendor": "Brûle",
+    "vendor": "Br\u00fble",
     "in_stock": true
   },
   {
@@ -454,7 +454,7 @@
     ],
     "price": 42,
     "image_url": "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80",
-    "description": "Hand-thrown stoneware with a reactive glaze. Every mug slightly different — that's the point.",
+    "description": "Hand-thrown stoneware with a reactive glaze. Every mug slightly different \u2014 that's the point.",
     "variants": {
       "color": [
         "ash grey",
@@ -747,5 +747,74 @@
     },
     "vendor": "Coast & Cure",
     "in_stock": true
+  },
+  {
+    "id": "lum-bev-001",
+    "name": "Champagne Gift Set",
+    "category": "home",
+    "vibe_tags": [
+      "warm",
+      "playful"
+    ],
+    "price": 89,
+    "image_url": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80",
+    "description": "A curated selection of fine champagne, perfect for celebrations.",
+    "variants": {
+      "size": [
+        "750ml",
+        "1.5L"
+      ]
+    },
+    "vendor": "Cellar & Co.",
+    "in_stock": true,
+    "required_credentials": [
+      "age_verification"
+    ]
+  },
+  {
+    "id": "lum-bev-002",
+    "name": "Whiskey Collection",
+    "category": "home",
+    "vibe_tags": [
+      "bold",
+      "warm"
+    ],
+    "price": 124,
+    "image_url": "https://images.unsplash.com/photo-1527281400683-1aae777175f8?w=600&q=80",
+    "description": "Three single-malt expressions, hand-selected by our spirits curator.",
+    "variants": {
+      "size": [
+        "200ml",
+        "375ml"
+      ]
+    },
+    "vendor": "Copper Still",
+    "in_stock": true,
+    "required_credentials": [
+      "age_verification"
+    ]
+  },
+  {
+    "id": "lum-bev-003",
+    "name": "Craft Beer Sampler",
+    "category": "home",
+    "vibe_tags": [
+      "playful",
+      "natural"
+    ],
+    "price": 48,
+    "image_url": "https://images.unsplash.com/photo-1436076863939-06870fe779c2?w=600&q=80",
+    "description": "Twelve craft beers from independent breweries \u2014 a different discovery every sip.",
+    "variants": {
+      "count": [
+        "12-pack",
+        "24-pack"
+      ]
+    },
+    "vendor": "Brew Society",
+    "in_stock": true,
+    "required_credentials": [
+      "age_verification"
+    ]
   }
 ]

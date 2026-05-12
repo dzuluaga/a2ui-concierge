@@ -96,6 +96,14 @@ def _resp(text=None, tool_calls=None, finish_reason="stop"):
 
 def _tool_call(id_, name, args):
     return _F(id=id_, function=_F(name=name, arguments=json.dumps(args)))
+class _StubBeta:
+    def __init__(self, scripted):
+        self.messages = _StubMessages(scripted)
+
+
+class _StubClient:
+    def __init__(self, scripted):
+        self.beta = _StubBeta(scripted)
 
 
 @pytest.mark.asyncio

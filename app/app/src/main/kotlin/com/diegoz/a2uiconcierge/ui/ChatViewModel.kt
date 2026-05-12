@@ -4,9 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.diegoz.a2uiconcierge.chat.AgentEvent
 import com.diegoz.a2uiconcierge.chat.ChatRepository
+import com.diegoz.a2uiconcierge.chat.CredentialRequestData
 import com.diegoz.a2uiconcierge.chat.Message
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -22,6 +26,9 @@ class ChatViewModel(private val repo: ChatRepository) : ViewModel() {
 
     private val _isThinking = MutableStateFlow(false)
     val isThinking: StateFlow<Boolean> = _isThinking.asStateFlow()
+
+    private val _credentialRequest = MutableSharedFlow<CredentialRequestData>(extraBufferCapacity = 1)
+    val credentialRequest: SharedFlow<CredentialRequestData> = _credentialRequest.asSharedFlow()
 
     /** When non-null, the chat screen presents a modal bottom sheet hosting this fragment. */
     private val _productDetail = MutableStateFlow<JsonObject?>(null)
@@ -80,6 +87,17 @@ class ChatViewModel(private val repo: ChatRepository) : ViewModel() {
         sendInternal(text)
     }
 
+    fun submitCredential(credentialToken: String?, dcqlQueryJson: String?) {
+        viewModelScope.launch {
+            try {
+                repo.submitCredential(credentialToken, dcqlQueryJson)
+            } catch (e: Exception) {
+                val msg = "⚠️ Credential submission failed: ${e.message}"
+                _messages.update { it + Message.AgentText(UUID.randomUUID().toString(), msg) }
+            }
+        }
+    }
+
     private fun sendInternal(text: String) {
         viewModelScope.launch {
             _isThinking.value = true
@@ -121,11 +139,13 @@ class ChatViewModel(private val repo: ChatRepository) : ViewModel() {
                                 }
                             }
                         }
+                        is AgentEvent.CredentialRequest -> {
+                            _credentialRequest.emit(ev.data)
+                        }
                         AgentEvent.End -> Unit
                     }
                 }
             } catch (e: Exception) {
-                // Surface the failure as a bubble so the demo never silently dies.
                 val msg = "⚠️ ${e::class.java.simpleName}: ${e.message ?: "request failed"}"
                 _messages.update { it + Message.AgentText(UUID.randomUUID().toString(), msg) }
             } finally {

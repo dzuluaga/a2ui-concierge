@@ -31,6 +31,11 @@ class ChatViewModelTest {
                 AgentEvent.A2ui(buildJsonObject {}),
                 AgentEvent.End,
             )
+
+            override suspend fun submitCredential(
+                credentialToken: String?,
+                dcqlQueryJson: String?,
+            ) = Unit
         }
         val vm = ChatViewModel(repo)
         vm.send("Need a gift")

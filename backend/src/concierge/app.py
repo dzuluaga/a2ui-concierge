@@ -11,6 +11,7 @@ load_dotenv()  # reads backend/.env so ANTHROPIC_API_KEY etc. are set before the
 
 from concierge.agent import GiftAgent  # noqa: E402 — must import after load_dotenv
 from concierge import payments  # noqa: E402
+from concierge.credential_verifier import verify_vp_token
 
 app = FastAPI(title="A2UI Gift Concierge")
 
@@ -20,6 +21,13 @@ _sessions: dict[str, GiftAgent] = defaultdict(lambda: GiftAgent())
 class ChatBody(BaseModel):
     sessionId: str
     userMessage: str
+
+
+class CredentialBody(BaseModel):
+    sessionId: str
+    credentialToken: str | None = None   # Raw VP token JSON from Android wallet
+    dcqlQueryJson: str | None = None     # The DCQL query that was used
+    credentials: dict[str, bool] = {}   # Fallback booleans (used if token absent)
 
 
 @app.get("/health")
@@ -32,15 +40,14 @@ async def chat(body: ChatBody) -> EventSourceResponse:
     agent = _sessions[body.sessionId]
 
     async def event_stream():
-        # Catch agent failures (e.g. Anthropic 400/429, Gemini safety filter)
-        # and surface them as a text bubble + clean `end`, otherwise the SSE
-        # stream hangs and the client sits on a thinking indicator forever.
         try:
             async for ev in agent.turn(body.userMessage):
                 if ev.kind == "end":
                     yield {"event": "end", "data": "{}"}
                 elif ev.kind == "a2ui":
                     yield {"event": "a2ui", "data": json.dumps(ev.payload)}
+                elif ev.kind == "credential_request":
+                    yield {"event": "credential_request", "data": json.dumps(ev.payload)}
                 else:
                     yield {"event": "text", "data": json.dumps({"text": ev.payload})}
         except Exception as e:
@@ -48,7 +55,24 @@ async def chat(body: ChatBody) -> EventSourceResponse:
             yield {"event": "text", "data": json.dumps({"text": msg})}
             yield {"event": "end", "data": "{}"}
 
+
     return EventSourceResponse(event_stream())
+
+
+@app.post("/credential")
+async def credential(body: CredentialBody) -> dict[str, bool]:
+    agent = _sessions.get(body.sessionId)
+    if agent is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if body.credentialToken and body.dcqlQueryJson:
+        # Parse the VP token to extract real claims instead of trusting booleans.
+        credentials = verify_vp_token(body.credentialToken, body.dcqlQueryJson)
+    else:
+        credentials = body.credentials
+
+    await agent.submit_credential_response(credentials)
+    return {"ok": True}
 
 
 class SettleBody(BaseModel):

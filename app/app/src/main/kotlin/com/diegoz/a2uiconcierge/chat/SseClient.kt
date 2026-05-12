@@ -10,6 +10,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.UUID
@@ -43,18 +44,12 @@ internal fun parseSseStream(lines: Sequence<String>): List<SseEvent> {
 
 class HttpChatRepository(private val baseUrl: String) : ChatRepository {
 
-    // SSE keeps a single HTTP connection open for the full agent turn (often
-    // 30-60s with multiple tool calls on DeepSeek/Gemini). The OkHttp default
-    // 10s read timeout fires between streamed events on slow turns; disable
-    // it for reads while keeping connect/write bounded.
     private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .writeTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(0, TimeUnit.MILLISECONDS)
-        .callTimeout(0, TimeUnit.MILLISECONDS)
+        .protocols(listOf(Protocol.HTTP_1_1)) // SSE requires HTTP/1.1
+        .readTimeout(0, TimeUnit.MILLISECONDS) // no timeout — SSE stream stays open
         .build()
     private val json = Json { ignoreUnknownKeys = true }
-    private val sessionId = UUID.randomUUID().toString()
+    val sessionId: String = UUID.randomUUID().toString()
 
     override fun send(text: String): Flow<AgentEvent> = flow {
         val payload = buildString {
@@ -82,6 +77,13 @@ class HttpChatRepository(private val baseUrl: String) : ChatRepository {
                                 emit(AgentEvent.Text(obj["text"]!!.jsonPrimitive.content))
                             }
                             "a2ui" -> emit(AgentEvent.A2ui(json.parseToJsonElement(ev.data).jsonObject))
+                            "credential_request" -> {
+                                val obj = json.parseToJsonElement(ev.data).jsonObject
+                                emit(AgentEvent.CredentialRequest(CredentialRequestData(
+                                    mcpSessionId = obj["mcp_session_id"]?.jsonPrimitive?.content.orEmpty(),
+                                    dcqlQueryJson = obj["dcql_query_json"]?.jsonPrimitive?.content.orEmpty(),
+                                )))
+                            }
                             "end" -> { emit(AgentEvent.End); return@flow }
                         }
                     }
@@ -91,4 +93,28 @@ class HttpChatRepository(private val baseUrl: String) : ChatRepository {
             }
         }
     }.flowOn(Dispatchers.IO)
+
+    override suspend fun submitCredential(
+        credentialToken: String?,
+        dcqlQueryJson: String?,
+    ) {
+        val payload = buildString {
+            append("{\"sessionId\":")
+            append(Json.encodeToString(String.serializer(), sessionId))
+            if (credentialToken != null) {
+                append(",\"credentialToken\":")
+                append(Json.encodeToString(String.serializer(), credentialToken))
+            }
+            if (dcqlQueryJson != null) {
+                append(",\"dcqlQueryJson\":")
+                append(Json.encodeToString(String.serializer(), dcqlQueryJson))
+            }
+            append("}")
+        }
+        val body = payload.toRequestBody("application/json".toMediaType())
+        val req = Request.Builder().url("$baseUrl/credential").post(body).build()
+        kotlinx.coroutines.withContext(Dispatchers.IO) {
+            client.newCall(req).execute().use { }
+        }
+    }
 }
