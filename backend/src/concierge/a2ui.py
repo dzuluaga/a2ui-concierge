@@ -35,8 +35,10 @@ def products(
     }
 
 def product_detail(*, product: dict[str, Any], variants: dict[str, list[str]]) -> dict[str, Any]:
+    requires_age = "age_verification" in product.get("required_credentials", [])
     return {
         "component": "product-detail",
+        "requires_age_verification": requires_age,
         "product": {
             "id": product["id"],
             "name": product["name"],
@@ -84,15 +86,28 @@ def payment_challenge(
     *,
     challenge: dict[str, Any],
     line_items: Iterable[tuple[str, float]],
+    requires_age_verification: bool = False,
+    age_dcql_query_json: str | None = None,
+    dpc_dcql_query_json: str | None = None,
+    loyalty_discount_pct: int = 0,
+    loyalty_dcql_query_json: str | None = None,
 ) -> dict[str, Any]:
     """Render an x402 payment sheet. The Android client reads ``challenge``
     fields to build an EIP-3009 transferWithAuthorization, biometric-signs it,
     and POSTs to /x402/settle. ``line_items`` is shown as the order summary."""
-    return {
+    out: dict[str, Any] = {
         "component": "payment-challenge",
         "order_id": challenge["order_id"],
         "label": challenge["label"],
         "amount_display": challenge["amount_display"],
         "items": [{"label": label, "amount": amount} for label, amount in line_items],
         "challenge": challenge,
+        "dpc_dcql_query_json": dpc_dcql_query_json or "",
     }
+    if requires_age_verification:
+        out["requires_age_verification"] = True
+        out["age_dcql_query_json"] = age_dcql_query_json or ""
+    if loyalty_discount_pct:
+        out["loyalty_discount_pct"] = loyalty_discount_pct
+        out["loyalty_dcql_query_json"] = loyalty_dcql_query_json or ""
+    return out

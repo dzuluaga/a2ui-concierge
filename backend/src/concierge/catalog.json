@@ -26,7 +26,8 @@
     "images": [
       "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80",
       "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80"
-    ]
+    ],
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-jewel-002",
@@ -56,7 +57,8 @@
     "images": [
       "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80",
       "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80"
-    ]
+    ],
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-jewel-003",
@@ -85,7 +87,8 @@
     "images": [
       "https://images.unsplash.com/photo-1597006354775-2955b15ec026?w=600&q=80",
       "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=600&q=80"
-    ]
+    ],
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-jewel-004",
@@ -113,7 +116,8 @@
       ]
     },
     "vendor": "Ovist",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-jewel-005",
@@ -133,7 +137,8 @@
       ]
     },
     "vendor": "Pillar & Pine",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-jewel-006",
@@ -157,7 +162,8 @@
       ]
     },
     "vendor": "Br\u00fble",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-jewel-007",
@@ -185,7 +191,8 @@
       ]
     },
     "vendor": "Maris",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-jewel-008",
@@ -210,7 +217,8 @@
     "images": [
       "https://images.unsplash.com/photo-1735480165343-96034e9528f9?w=600&q=80",
       "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&q=80"
-    ]
+    ],
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-jewel-009",
@@ -234,7 +242,8 @@
       ]
     },
     "vendor": "Marais Atelier",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-jewel-010",
@@ -259,7 +268,8 @@
       ]
     },
     "vendor": "Vault Studio",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-jewel-011",
@@ -279,7 +289,8 @@
       ]
     },
     "vendor": "Camille",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-jewel-012",
@@ -320,7 +331,8 @@
       ]
     },
     "vendor": "Ovist",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-jewel-013",
@@ -340,7 +352,8 @@
       ]
     },
     "vendor": "Pillar & Pine",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-jewel-014",
@@ -362,7 +375,8 @@
       ]
     },
     "vendor": "Br\u00fble",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-jewel-015",
@@ -387,7 +401,8 @@
       ]
     },
     "vendor": "Maris",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-home-001",
@@ -412,7 +427,8 @@
       ]
     },
     "vendor": "Casa Lumen",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-home-002",
@@ -442,7 +458,8 @@
     "images": [
       "https://images.unsplash.com/photo-1585938517800-6dea260062cf?w=600&q=80",
       "https://images.unsplash.com/photo-1602607203588-d6d0eda790e3?w=600&q=80"
-    ]
+    ],
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-home-003",
@@ -469,7 +486,8 @@
     "images": [
       "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80",
       "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80"
-    ]
+    ],
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-home-004",
@@ -490,7 +508,8 @@
       ]
     },
     "vendor": "Field & Slope",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-home-005",
@@ -512,7 +531,8 @@
       ]
     },
     "vendor": "Notabene",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-stat-001",
@@ -533,7 +553,8 @@
       ]
     },
     "vendor": "Notabene",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-stat-002",
@@ -565,7 +586,8 @@
     "images": [
       "https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=600&q=80",
       "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=600&q=80"
-    ]
+    ],
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-stat-003",
@@ -586,7 +608,8 @@
       ]
     },
     "vendor": "Marble Press",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-stat-004",
@@ -612,7 +635,8 @@
       ]
     },
     "vendor": "Folio",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-stat-005",
@@ -637,7 +661,8 @@
       ]
     },
     "vendor": "Plain Press",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-skin-001",
@@ -657,7 +682,8 @@
       ]
     },
     "vendor": "Coast & Cure",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-skin-002",
@@ -682,7 +708,8 @@
     "images": [
       "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=600&q=80",
       "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=600&q=80"
-    ]
+    ],
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-skin-003",
@@ -706,7 +733,8 @@
       ]
     },
     "vendor": "Verra",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-skin-004",
@@ -726,7 +754,8 @@
       ]
     },
     "vendor": "Field & Slope",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-skin-005",
@@ -746,12 +775,13 @@
       ]
     },
     "vendor": "Coast & Cure",
-    "in_stock": true
+    "in_stock": true,
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-bev-001",
     "name": "Champagne Gift Set",
-    "category": "home",
+    "category": "beverages",
     "vibe_tags": [
       "warm",
       "playful"
@@ -769,12 +799,13 @@
     "in_stock": true,
     "required_credentials": [
       "age_verification"
-    ]
+    ],
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-bev-002",
     "name": "Whiskey Collection",
-    "category": "home",
+    "category": "beverages",
     "vibe_tags": [
       "bold",
       "warm"
@@ -792,12 +823,13 @@
     "in_stock": true,
     "required_credentials": [
       "age_verification"
-    ]
+    ],
+    "loyalty_discount_pct": 10
   },
   {
     "id": "lum-bev-003",
     "name": "Craft Beer Sampler",
-    "category": "home",
+    "category": "beverages",
     "vibe_tags": [
       "playful",
       "natural"
@@ -815,6 +847,7 @@
     "in_stock": true,
     "required_credentials": [
       "age_verification"
-    ]
+    ],
+    "loyalty_discount_pct": 10
   }
 ]

@@ -29,7 +29,7 @@ CREDENTIAL_DEFINITIONS: list[CredentialDefinition] = [
                 format="mso_mdoc",
                 meta={"doctype_value": "org.iso.18013.5.1.mDL"},
                 claims=[
-                    {"id": "given_name", "path": ["org.iso.18013.5.1", "given_name"]},
+                    {"id": "given_name",  "path": ["org.iso.18013.5.1", "given_name"]},
                     {"id": "family_name", "path": ["org.iso.18013.5.1", "family_name"]},
                     {"id": "age_over_21", "path": ["org.iso.18013.5.1", "age_over_21"]},
                     {"id": "age_over_18", "path": ["org.iso.18013.5.1", "age_over_18"]},
@@ -41,11 +41,62 @@ CREDENTIAL_DEFINITIONS: list[CredentialDefinition] = [
                 format="mso_mdoc",
                 meta={"doctype_value": "eu.europa.ec.eudi.pid.1"},
                 claims=[
-                    {"id": "given_name", "path": ["eu.europa.ec.eudi.pid.1", "given_name"]},
+                    {"id": "given_name",  "path": ["eu.europa.ec.eudi.pid.1", "given_name"]},
                     {"id": "family_name", "path": ["eu.europa.ec.eudi.pid.1", "family_name"]},
                     {"id": "age_over_18", "path": ["eu.europa.ec.eudi.pid.1", "age_over_18"]},
                 ],
                 claim_sets=[["age_over_18"]],
+            ),
+        ],
+    ),
+    CredentialDefinition(
+        key="loyalty_membership",
+        label="Lumen loyalty membership (optional — 10% discount)",
+        discount_percentage=10,
+        dcql_purpose="Lumen Goods loyalty membership — 10% wholesale discount",
+        dcql_options=[
+            CredentialOption(
+                id="loyalty",
+                format="mso_mdoc",
+                meta={"doctype_value": "org.multipaz.loyalty.1"},
+                claims=[
+                    {"id": "membership_number", "path": ["org.multipaz.loyalty.1", "membership_number"]},
+                    {"id": "tier",              "path": ["org.multipaz.loyalty.1", "tier"]},
+                ],
+                claim_sets=[["membership_number"], ["tier"]],
+            ),
+        ],
+    ),
+    CredentialDefinition(
+        key="dpc_payment",
+        label="Digital payment credential",
+        dcql_purpose="Payment authorization for {amount} USDC",
+        dcql_options=[
+            CredentialOption(
+                id="payment_multipaz",
+                format="mso_mdoc",
+                meta={"doctype_value": "org.multipaz.payment.sca.1"},
+                claims=[
+                    {"id": "issuer_name",              "path": ["org.multipaz.payment.sca.1", "issuer_name"]},
+                    {"id": "holder_name",              "path": ["org.multipaz.payment.sca.1", "holder_name"]},
+                    {"id": "masked_account_reference", "path": ["org.multipaz.payment.sca.1", "masked_account_reference"]},
+                    {"id": "account_number",           "path": ["org.multipaz.payment.sca.1", "account_number"]},
+                    {"id": "expiry_date",              "path": ["org.multipaz.payment.sca.1", "expiry_date"]},
+                ],
+                claim_sets=[["issuer_name"], ["holder_name"], ["masked_account_reference"], ["account_number"]],
+            ),
+            CredentialOption(
+                id="payment_emvco",
+                format="mso_mdoc",
+                meta={"doctype_value": "com.emvco.payment_card.1"},
+                claims=[
+                    {"id": "cardholder_name", "path": ["com.emvco.payment_card.1", "cardholder_name"]},
+                    {"id": "account_number",  "path": ["com.emvco.payment_card.1", "account_number"]},
+                    {"id": "expiry_date",     "path": ["com.emvco.payment_card.1", "expiry_date"]},
+                    {"id": "card_network",    "path": ["com.emvco.payment_card.1", "card_network"]},
+                    {"id": "issuer_name",     "path": ["com.emvco.payment_card.1", "issuer_name"]},
+                ],
+                claim_sets=[["cardholder_name"], ["account_number"], ["expiry_date"]],
             ),
         ],
     ),

@@ -4,6 +4,7 @@ export class ProductDetail extends LitElement {
   static properties = {
     product: {},
     variant_groups: { type: Array },
+    requires_age_verification: { type: Boolean },
     selection: { state: true },
     activeImage: { state: true },
   };
@@ -217,6 +218,19 @@ export class ProductDetail extends LitElement {
       transition: transform .08s;
     }
     .followup:active { transform: scale(0.97); }
+    .age-notice {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 14px 16px 0;
+      padding: 10px 12px;
+      background: #fff8ec;
+      border: 1px solid #f5d78e;
+      border-radius: 10px;
+    }
+    .age-notice-icon { font-size: 16px; flex-shrink: 0; }
+    .age-notice-text { font-size: 12px; color: #7a5c00; line-height: 1.4; }
+    .age-notice-text strong { font-weight: 600; }
   `;
   constructor() {
     super();
@@ -275,6 +289,16 @@ export class ProductDetail extends LitElement {
       </div>
 
       ${p.description ? html`<div class="description">${p.description}</div>` : null}
+
+      ${this.requires_age_verification ? html`
+        <div class="age-notice">
+          <span class="age-notice-icon">🪪</span>
+          <span class="age-notice-text">
+            <strong>Age verification required.</strong>
+            You'll need to present a valid digital ID at checkout.
+          </span>
+        </div>
+      ` : null}
 
       ${(this.variant_groups || []).map(g => html`
         <div class="group">

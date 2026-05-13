@@ -19,15 +19,29 @@ export class ConfirmationCard extends LitElement {
     .tx .hash { color: #4a3aa0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; word-break: break-all; }
     .tx .lbl { display: flex; justify-content: space-between; color: #6b6973; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; font-size: 10px; margin-bottom: 3px; }
     .tx .chev { color: #8a8790; font-weight: 600; }
+    .dpc-badge { margin-top: 10px; padding: 9px 12px; background: #f0f1ff; border-radius: 10px; display: flex; align-items: center; gap: 8px; }
+    .dpc-badge .icon { font-size: 18px; flex-shrink: 0; }
+    .dpc-badge .info { display: flex; flex-direction: column; }
+    .dpc-badge .lbl { color: #4a3aa0; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; font-size: 10px; }
+    .dpc-badge .sub { color: #6b6973; font-size: 11.5px; margin-top: 2px; }
   `;
   render() {
+    const isDpc = this.tx_hash?.startsWith("dpc-");
     const txShort = this.tx_hash ? `${this.tx_hash.slice(0, 10)}…${this.tx_hash.slice(-8)}` : null;
     return html`
       <div class="badge">✓ Order placed</div>
       ${this.items.map(li => html`<div class="row"><span>${li.label}</span><span>$${li.amount}</span></div>`)}
       <div class="row total"><span>Total</span><span>$${this.total}</span></div>
       <div class="meta">Arrives ${this.ship_date} · #${this.order_id}</div>
-      ${this.tx_hash ? html`
+      ${isDpc ? html`
+        <div class="dpc-badge">
+          <div class="icon">💳</div>
+          <div class="info">
+            <div class="lbl">Card payment</div>
+            <div class="sub">Paid with digital payment credential</div>
+          </div>
+        </div>
+      ` : this.tx_hash ? html`
         <button class="tx" type="button" @click=${this._openTxDetail}>
           <div class="lbl"><span>On-chain payment</span><span class="chev">View ›</span></div>
           <div class="hash">${txShort}</div>

@@ -103,7 +103,7 @@
             </div>
           `})}
       </div>
-    `}_tap(e){window.AndroidBridge?.onAction(JSON.stringify({component:`card-grid`,product_id:e.id,name:e.name}))}};customElements.define(`a2ui-card-grid`,ve);var ye=class extends J{static properties={product:{},variant_groups:{type:Array},selection:{state:!0},activeImage:{state:!0}};static styles=o`
+    `}_tap(e){window.AndroidBridge?.onAction(JSON.stringify({component:`card-grid`,product_id:e.id,name:e.name}))}};customElements.define(`a2ui-card-grid`,ve);var ye=class extends J{static properties={product:{},variant_groups:{type:Array},requires_age_verification:{type:Boolean},selection:{state:!0},activeImage:{state:!0}};static styles=o`
     :host {
       display: block;
       font-family: var(--a2ui-font-sans);
@@ -313,6 +313,19 @@
       transition: transform .08s;
     }
     .followup:active { transform: scale(0.97); }
+    .age-notice {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 14px 16px 0;
+      padding: 10px 12px;
+      background: #fff8ec;
+      border: 1px solid #f5d78e;
+      border-radius: 10px;
+    }
+    .age-notice-icon { font-size: 16px; flex-shrink: 0; }
+    .age-notice-text { font-size: 12px; color: #7a5c00; line-height: 1.4; }
+    .age-notice-text strong { font-weight: 600; }
   `;constructor(){super(),this.selection={},this.activeImage=0}firstUpdated(){let e=this.renderRoot.querySelector(`.gallery-track`);e&&e.addEventListener(`scroll`,()=>{let t=e.clientWidth||1,n=Math.round(e.scrollLeft/t);n!==this.activeImage&&(this.activeImage=n)},{passive:!0})}render(){let e=this.product||{},t=e.images&&e.images.length?e.images:[e.image_url].filter(Boolean),n=e.vendor||`Lumen Goods`,r=(n[0]||`L`).toUpperCase(),i=e.sale_price!=null&&e.sale_price<e.price;return L`
       <div class="gallery">
         <button class="close" aria-label="Close" @click=${this._close}>✕</button>
@@ -349,6 +362,16 @@
       </div>
 
       ${e.description?L`<div class="description">${e.description}</div>`:null}
+
+      ${this.requires_age_verification?L`
+        <div class="age-notice">
+          <span class="age-notice-icon">🪪</span>
+          <span class="age-notice-text">
+            <strong>Age verification required.</strong>
+            You'll need to present a valid digital ID at checkout.
+          </span>
+        </div>
+      `:null}
 
       ${(this.variant_groups||[]).map(e=>L`
         <div class="group">
@@ -423,18 +446,31 @@
     .tx .hash { color: #4a3aa0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; word-break: break-all; }
     .tx .lbl { display: flex; justify-content: space-between; color: #6b6973; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; font-size: 10px; margin-bottom: 3px; }
     .tx .chev { color: #8a8790; font-weight: 600; }
-  `;render(){let e=this.tx_hash?`${this.tx_hash.slice(0,10)}…${this.tx_hash.slice(-8)}`:null;return L`
+    .dpc-badge { margin-top: 10px; padding: 9px 12px; background: #f0f1ff; border-radius: 10px; display: flex; align-items: center; gap: 8px; }
+    .dpc-badge .icon { font-size: 18px; flex-shrink: 0; }
+    .dpc-badge .info { display: flex; flex-direction: column; }
+    .dpc-badge .lbl { color: #4a3aa0; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; font-size: 10px; }
+    .dpc-badge .sub { color: #6b6973; font-size: 11.5px; margin-top: 2px; }
+  `;render(){let e=this.tx_hash?.startsWith(`dpc-`),t=this.tx_hash?`${this.tx_hash.slice(0,10)}…${this.tx_hash.slice(-8)}`:null;return L`
       <div class="badge">✓ Order placed</div>
       ${this.items.map(e=>L`<div class="row"><span>${e.label}</span><span>$${e.amount}</span></div>`)}
       <div class="row total"><span>Total</span><span>$${this.total}</span></div>
       <div class="meta">Arrives ${this.ship_date} · #${this.order_id}</div>
-      ${this.tx_hash?L`
+      ${e?L`
+        <div class="dpc-badge">
+          <div class="icon">💳</div>
+          <div class="info">
+            <div class="lbl">Card payment</div>
+            <div class="sub">Paid with digital payment credential</div>
+          </div>
+        </div>
+      `:this.tx_hash?L`
         <button class="tx" type="button" @click=${this._openTxDetail}>
           <div class="lbl"><span>On-chain payment</span><span class="chev">View ›</span></div>
-          <div class="hash">${e}</div>
+          <div class="hash">${t}</div>
         </button>
       `:null}
-    `}_openTxDetail(){let e={component:`tx-detail-open`,order_id:this.order_id,tx_hash:this.tx_hash,explorer_url:this.explorer_url,items:this.items,total:this.total,ship_date:this.ship_date};window.AndroidBridge?.onAction?window.AndroidBridge.onAction(JSON.stringify(e)):this.explorer_url&&window.open(this.explorer_url,`_blank`,`noreferrer`)}};customElements.define(`a2ui-confirmation-card`,xe);var Se=class extends J{static properties={order_id:{},label:{},amount_display:{},items:{type:Array},challenge:{type:Object},status:{state:!0},error:{state:!0}};static styles=o`
+    `}_openTxDetail(){let e={component:`tx-detail-open`,order_id:this.order_id,tx_hash:this.tx_hash,explorer_url:this.explorer_url,items:this.items,total:this.total,ship_date:this.ship_date};window.AndroidBridge?.onAction?window.AndroidBridge.onAction(JSON.stringify(e)):this.explorer_url&&window.open(this.explorer_url,`_blank`,`noreferrer`)}};customElements.define(`a2ui-confirmation-card`,xe);var Se=class extends J{static properties={order_id:{},label:{},amount_display:{},items:{type:Array},challenge:{type:Object},requires_age_verification:{type:Boolean},age_dcql_query_json:{},dpc_dcql_query_json:{},loyalty_discount_pct:{type:Number},loyalty_dcql_query_json:{},payment_method:{state:!0},status:{state:!0},age_status:{state:!0},loyalty_status:{state:!0},discount_amount:{state:!0},effective_total:{state:!0},effective_challenge:{state:!0},effective_order_id:{state:!0},error:{state:!0}};static styles=o`
     :host {
       display: block;
       position: relative;
@@ -472,6 +508,150 @@
     .summary { margin-top: 12px; padding-top: 10px; border-top: 1px solid #ece8e0; }
     .total { border-top: 1px solid #ece8e0; margin-top: 6px; padding-top: 10px; font-weight: 600; }
     .total .amt { font-size: 15px; }
+
+    /* ── age verification section ── */
+    .age-section {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #ece8e0;
+      background: #faf9f7;
+    }
+    .age-section.verified {
+      border-color: #c3e6cb;
+      background: #f4fdf6;
+    }
+    .age-section.failed {
+      border-color: #f5c6cb;
+      background: #fff5f5;
+    }
+    .age-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .age-icon { font-size: 20px; line-height: 1; flex-shrink: 0; }
+    .age-text { flex: 1; }
+    .age-title { font-size: 13px; font-weight: 600; color: #1B1B1F; }
+    .age-subtitle { font-size: 11.5px; color: #8a8790; margin-top: 2px; }
+    .age-subtitle.fail { color: #b22; }
+    .verify-btn {
+      margin-top: 10px;
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 0;
+      background: #1B1B1F;
+      color: #fff;
+      font: inherit;
+      font-weight: 600;
+      font-size: 13.5px;
+      cursor: pointer;
+      transition: transform .08s, opacity .15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .verify-btn:active:not(:disabled) { transform: scale(0.985); }
+    .verify-btn:disabled { opacity: .55; cursor: default; }
+
+    /* ── loyalty section ── */
+    .loyalty-section {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1.5px dashed #d4b96a;
+      background: #fffbf0;
+    }
+    .loyalty-section.verified {
+      border: 1.5px solid #c3a73a;
+      background: #fffbf0;
+    }
+    .loyalty-row { display: flex; align-items: center; gap: 10px; }
+    .loyalty-icon { font-size: 20px; flex-shrink: 0; line-height: 1; }
+    .loyalty-text { flex: 1; }
+    .loyalty-title { font-size: 13px; font-weight: 600; color: #1B1B1F; }
+    .loyalty-subtitle { font-size: 11.5px; color: #8a8790; margin-top: 2px; }
+    .loyalty-pill {
+      font-size: 10px; font-weight: 700; letter-spacing: .3px;
+      text-transform: uppercase; padding: 3px 8px;
+      border-radius: 999px; background: #f5d87a; color: #6b4e00;
+      flex-shrink: 0;
+    }
+    .loyalty-btn {
+      margin-top: 10px; width: 100%;
+      padding: 10px 14px; border-radius: 10px; border: 0;
+      background: #1B1B1F; color: #fff;
+      font: inherit; font-weight: 600; font-size: 13.5px;
+      cursor: pointer; transition: transform .08s, opacity .15s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .loyalty-btn:active:not(:disabled) { transform: scale(0.985); }
+    .loyalty-btn:disabled { opacity: .55; cursor: default; }
+    .loyalty-discount-row {
+      display: flex; justify-content: space-between;
+      padding: 6px 0; font-size: 13.5px; color: #2d7a2d; font-weight: 600;
+    }
+
+    /* ── payment method selector ── */
+    .method-section { margin-top: 16px; }
+    .section-label {
+      font-size: 10.5px;
+      color: #8a8790;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .method-cards { display: flex; flex-direction: column; gap: 8px; }
+    .method-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1.5px solid #ece8e0;
+      background: #faf9f7;
+      cursor: pointer;
+      transition: border-color .15s, background .15s, transform .08s;
+      text-align: left;
+      width: 100%;
+      font: inherit;
+    }
+    .method-card.selected {
+      border-color: var(--a2ui-color-accent, #5B6CFF);
+      background: #f0f1ff;
+    }
+    .method-card:active { transform: scale(0.99); }
+    .method-card:disabled { opacity: .55; cursor: default; }
+    .method-icon {
+      font-size: 22px;
+      flex-shrink: 0;
+      width: 32px;
+      text-align: center;
+      line-height: 1;
+    }
+    .method-info { flex: 1; min-width: 0; }
+    .method-name { font-size: 13.5px; font-weight: 600; color: #1B1B1F; }
+    .method-desc { font-size: 11.5px; color: #8a8790; margin-top: 2px; }
+    .method-check {
+      width: 20px; height: 20px;
+      border-radius: 999px;
+      border: 1.5px solid #ccc;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      font-size: 11px;
+      transition: background .15s, border-color .15s, color .15s;
+    }
+    .method-card.selected .method-check {
+      background: var(--a2ui-color-accent, #5B6CFF);
+      border-color: var(--a2ui-color-accent, #5B6CFF);
+      color: #fff;
+    }
+
+    /* ── pay button ── */
     .pay {
       margin-top: 14px; width: 100%;
       padding: 13px 18px; border-radius: 14px; border: 0;
@@ -483,37 +663,118 @@
       display: flex; align-items: center; justify-content: center; gap: 8px;
     }
     .pay:active:not(:disabled) { transform: scale(0.985); }
-    .pay:disabled { opacity: .55; cursor: default; }
+    .pay:disabled { opacity: .45; cursor: default; box-shadow: none; }
     .hint { margin-top: 8px; font-size: 11.5px; color: #8a8790; text-align: center; line-height: 1.5; }
     .err { margin-top: 10px; font-size: 12px; color: #b22; }
     .dot { width: 8px; height: 8px; border-radius: 999px; background: #5B6CFF; box-shadow: 0 0 0 4px rgba(91,108,255,0.18); }
-  `;constructor(){super(),this.status=`idle`,this.error=``}render(){return L`
+  `;constructor(){super(),this.payment_method=null,this.status=`idle`,this.age_status=`idle`,this.loyalty_status=`idle`,this.discount_amount=0,this.effective_total=null,this.effective_challenge=null,this.effective_order_id=null,this.error=``}get _orderId(){return this.effective_order_id??this.order_id}get _challenge(){return this.effective_challenge??this.challenge}get _payEnabled(){return!this.payment_method||this.requires_age_verification&&this.age_status!==`verified`?!1:this.status===`idle`||this.status===`error`}get _payLabel(){return this.status===`dpc_pending`?`Authorizing card…`:this.status===`paying`?this.payment_method===`usdc`?`Settling on-chain…`:`Processing payment…`:this.status===`done`?`Paid ✓`:this.payment_method?this.payment_method===`card`?`Pay with Card`:`Pay ${this.amount_display} · USDC`:`Select a payment method`}get _hint(){return this.payment_method?this.payment_method===`card`?`Your digital payment card is presented securely via Android Credential Manager.`:`On Android, payment is signed with your StrongBox-backed wallet key (EIP-3009).`:`Choose a payment method above to continue.`}render(){let e=this.effective_total==null?this.amount_display:`$${this.effective_total.toFixed(2)}`;return L`
       <button class="close" aria-label="Close" @click=${this._close}>✕</button>
-      <div class="badge">x402 · USDC payment</div>
+      <div class="badge">Payment</div>
       <div class="label">${this.label||`Confirm payment`}</div>
-      <div class="meta">${this.challenge?.network||``} · ${this.amount_display}</div>
+      <div class="meta">${this._challenge?.network||``} · ${e}</div>
 
       <div class="summary">
         ${(this.items||[]).map(e=>L`
           <div class="row"><span>${e.label}</span><span>$${e.amount.toFixed(2)}</span></div>
         `)}
-        <div class="row total"><span>Total</span><span class="amt">${this.amount_display}</span></div>
+        ${this.discount_amount>0?L`
+          <div class="loyalty-discount-row">
+            <span>Loyalty discount (10%)</span><span>−$${this.discount_amount.toFixed(2)}</span>
+          </div>
+        `:null}
+        <div class="row total"><span>Total</span><span class="amt">${e}</span></div>
       </div>
+
+      ${this.requires_age_verification?this._renderAgeSection():null}
+      ${this.loyalty_discount_pct?this._renderLoyaltySection():null}
+      ${this._renderMethodSection()}
 
       <button
         class="pay"
-        ?disabled=${this.status!==`idle`}
+        ?disabled=${!this._payEnabled}
         @click=${this._pay}
       >
-        <span class="dot"></span>
-        ${this.status===`idle`?`Pay ${this.amount_display}`:this.status===`paying`?`Settling on-chain…`:this.status===`done`?`Paid ✓`:`Try again`}
+        ${this.status===`idle`||this.status===`error`?L`<span class="dot"></span>`:null}
+        ${this._payLabel}
       </button>
       ${this.error?L`<div class="err">${this.error}</div>`:null}
-      <div class="hint">
-        On Android, this taps the StrongBox-backed wallet for a hardware-signed
-        EIP-3009 authorization. On the web, settlement is mocked for the demo.
-      </div>
-    `}_close(){window.AndroidBridge?.onAction(JSON.stringify({component:`payment-challenge-close`}))}async _pay(){if(!(this.status!==`idle`&&this.status!==`error`)){this.status=`paying`,this.error=``;try{let e=await this._settle();this.status=`done`,window.AndroidBridge?.onAction(JSON.stringify({component:`payment-completed`,order_id:this.order_id,tx_hash:e.tx_hash,explorer_url:e.explorer_url}))}catch(e){this.status=`error`,this.error=e.message||String(e)}}}async _settle(){if(window.AndroidBridge?.settle)return new Promise((e,t)=>{let n=`__settle_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;window[n]=r=>{if(delete window[n],!r)return t(Error(`empty bridge response`));if(r.error)return t(Error(r.error));e(r)};try{window.AndroidBridge.settle(this.order_id,JSON.stringify(this.challenge||{}),n)}catch(e){delete window[n],t(e)}});let e={scheme:`exact`,kind:`stub-web`,order_id:this.order_id,nonce:this.challenge?.nonce},t=await fetch(`/x402/settle`,{method:`POST`,headers:{"content-type":`application/json`},body:JSON.stringify({order_id:this.order_id,envelope:e})});if(!t.ok){let e=await t.text().catch(()=>``);throw Error(`HTTP ${t.status}: ${e}`)}return await t.json()}};customElements.define(`a2ui-payment-challenge`,Se);var Ce=class extends J{static properties={order_id:{},tx_hash:{},explorer_url:{},network:{},amount_display:{},total:{type:Number},items:{type:Array},ship_date:{},pay_to:{}};static styles=o`
+      <div class="hint">${this._hint}</div>
+    `}_renderAgeSection(){let e=this.age_status;return e===`verified`?L`
+        <div class="age-section verified">
+          <div class="age-row">
+            <div class="age-icon">✅</div>
+            <div class="age-text">
+              <div class="age-title">Age verified</div>
+              <div class="age-subtitle">Your digital ID was confirmed</div>
+            </div>
+          </div>
+        </div>`:L`
+      <div class="age-section ${e===`failed`?`failed`:``}">
+        <div class="age-row">
+          <div class="age-icon">${e===`failed`?`❌`:`🪪`}</div>
+          <div class="age-text">
+            <div class="age-title">Age verification required</div>
+            <div class="age-subtitle ${e===`failed`?`fail`:``}">
+              ${e===`failed`?`Verification failed. Please try again.`:`This product requires proof of age to purchase.`}
+            </div>
+          </div>
+        </div>
+        <button
+          class="verify-btn"
+          ?disabled=${e===`verifying`}
+          @click=${this._verifyAge}
+        >
+          ${e===`verifying`?`Verifying…`:e===`failed`?`Try again`:`Verify Age with Wallet`}
+        </button>
+      </div>`}_renderMethodSection(){let e=this.status===`paying`||this.status===`dpc_pending`||this.status===`done`;return L`
+      <div class="method-section">
+        <div class="section-label">Payment method</div>
+        <div class="method-cards">
+          ${this._renderMethodCard(`card`,`💳`,`Card Wallet`,`Pay with your digital payment credential`,e)}
+          ${this._renderMethodCard(`usdc`,`⟠`,`USDC on Base`,`On-chain transfer · no card needed`,e)}
+        </div>
+      </div>`}_renderMethodCard(e,t,n,r,i){let a=this.payment_method===e;return L`
+      <button
+        class="method-card ${a?`selected`:``}"
+        ?disabled=${i}
+        @click=${()=>this._selectMethod(e)}
+      >
+        <div class="method-icon">${t}</div>
+        <div class="method-info">
+          <div class="method-name">${n}</div>
+          <div class="method-desc">${r}</div>
+        </div>
+        <div class="method-check">${a?`✓`:``}</div>
+      </button>`}_selectMethod(e){this.status===`paying`||this.status===`dpc_pending`||this.status===`done`||(this.payment_method=e,this.status=`idle`,this.error=``)}_renderLoyaltySection(){let e=this.loyalty_status;return e===`verified`?L`
+        <div class="loyalty-section verified">
+          <div class="loyalty-row">
+            <div class="loyalty-icon">🎫</div>
+            <div class="loyalty-text">
+              <div class="loyalty-title">Loyalty discount applied</div>
+              <div class="loyalty-subtitle">10% off your order total</div>
+            </div>
+            <div class="loyalty-pill">−10%</div>
+          </div>
+        </div>`:L`
+      <div class="loyalty-section ${e===`failed`?`border-red`:``}">
+        <div class="loyalty-row">
+          <div class="loyalty-icon">🎫</div>
+          <div class="loyalty-text">
+            <div class="loyalty-title">Lumen Member? Save 10%</div>
+            <div class="loyalty-subtitle">
+              ${e===`failed`?`Could not verify membership. Try again or skip.`:`Present your digital membership card for an instant discount.`}
+            </div>
+          </div>
+          <div class="loyalty-pill">${this.loyalty_discount_pct}% off</div>
+        </div>
+        <button
+          class="loyalty-btn"
+          ?disabled=${e===`verifying`}
+          @click=${this._applyLoyalty}
+        >
+          ${e===`verifying`?`Verifying…`:e===`failed`?`Try again`:`Apply Member Discount`}
+        </button>
+      </div>`}_close(){window.AndroidBridge?.onAction(JSON.stringify({component:`payment-challenge-close`}))}async _applyLoyalty(){if(this.loyalty_status=`verifying`,this.error=``,window.AndroidBridge?.applyLoyalty){let e=`__loyalty_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;window[e]=t=>{if(delete window[e],!t||t.cancelled||t.error){this.loyalty_status=`failed`;return}this._onLoyaltyApplied(t)};try{window.AndroidBridge.applyLoyalty(this._orderId,this.loyalty_dcql_query_json||``,e)}catch{delete window[e],this.loyalty_status=`failed`}}else try{let e=await fetch(`/loyalty/apply`,{method:`POST`,headers:{"content-type":`application/json`},body:JSON.stringify({order_id:this._orderId})});if(!e.ok)throw Error(`HTTP ${e.status}`);let t=await e.json();this._onLoyaltyApplied(t)}catch{this.loyalty_status=`failed`}}_onLoyaltyApplied(e){this.loyalty_status=`verified`,this.discount_amount=e.discount_amount??0,this.effective_total=e.new_total??null,e.new_order_id&&(this.effective_order_id=e.new_order_id),e.new_challenge&&(this.effective_challenge=e.new_challenge)}async _verifyAge(){if(this.age_status=`verifying`,this.error=``,window.AndroidBridge?.verifyAge){let e=`__verifyAge_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;window[e]=t=>{delete window[e],this.age_status=t?`verified`:`failed`};try{window.AndroidBridge.verifyAge(this.age_dcql_query_json||``,e)}catch{delete window[e],this.age_status=`failed`}}else await new Promise(e=>setTimeout(e,800)),this.age_status=`verified`}async _pay(){this._payEnabled&&(this.error=``,this.payment_method===`card`?await this._payWithCard():await this._payWithUsdc())}async _payWithCard(){if(this.status=`dpc_pending`,!await this._requestDpc()){this.status=`error`,this.error=`Payment authorization was cancelled or declined.`;return}this.status=`paying`;try{let e=await this._settleDpc();this.status=`done`,window.AndroidBridge?.onAction(JSON.stringify({component:`payment-completed`,order_id:this._orderId,tx_hash:e.tx_hash,explorer_url:e.explorer_url??null}))}catch(e){this.status=`error`,this.error=e.message||String(e)}}_settleDpc(){return window.AndroidBridge?.settleDpc?new Promise((e,t)=>{let n=`__dpcSettle_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;window[n]=r=>{if(delete window[n],!r)return t(Error(`empty bridge response`));if(r.error)return t(Error(r.error));e(r)};try{window.AndroidBridge.settleDpc(this._orderId,n)}catch(e){delete window[n],t(e)}}):fetch(`/dpc/settle`,{method:`POST`,headers:{"content-type":`application/json`},body:JSON.stringify({order_id:this._orderId})}).then(e=>e.ok?e.json():e.text().then(t=>{throw Error(`HTTP ${e.status}: ${t}`)}))}async _payWithUsdc(){this.status=`paying`;try{let e=await this._settle();this.status=`done`,window.AndroidBridge?.onAction(JSON.stringify({component:`payment-completed`,order_id:this._orderId,tx_hash:e.tx_hash,explorer_url:e.explorer_url??null}))}catch(e){this.status=`error`,this.error=e.message||String(e)}}_requestDpc(){return new Promise(e=>{if(window.AndroidBridge?.verifyDpc){let t=`__dpc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;window[t]=n=>{delete window[t],e(!!n)};try{window.AndroidBridge.verifyDpc(this.dpc_dcql_query_json||``,t)}catch{delete window[t],e(!1)}}else setTimeout(()=>e(!0),600)})}async _settle(){if(window.AndroidBridge?.settle)return new Promise((e,t)=>{let n=`__settle_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;window[n]=r=>{if(delete window[n],!r)return t(Error(`empty bridge response`));if(r.error)return t(Error(r.error));e(r)};try{window.AndroidBridge.settle(this._orderId,JSON.stringify(this._challenge||{}),n)}catch(e){delete window[n],t(e)}});let e={scheme:`exact`,kind:`stub-web`,order_id:this._orderId,nonce:this._challenge?.nonce},t=await fetch(`/x402/settle`,{method:`POST`,headers:{"content-type":`application/json`},body:JSON.stringify({order_id:this._orderId,envelope:e})});if(!t.ok){let e=await t.text().catch(()=>``);throw Error(`HTTP ${t.status}: ${e}`)}return await t.json()}};customElements.define(`a2ui-payment-challenge`,Se);var Ce=class extends J{static properties={order_id:{},tx_hash:{},explorer_url:{},network:{},amount_display:{},total:{type:Number},items:{type:Array},ship_date:{},pay_to:{}};static styles=o`
     :host {
       display: block;
       position: relative;

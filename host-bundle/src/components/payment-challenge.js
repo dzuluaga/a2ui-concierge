@@ -1,13 +1,15 @@
 import { LitElement, html, css } from "lit";
 
 /**
- * Renders an x402 payment sheet inline in the chat. On mobile / Android the
- * StrongBox-backed path produces a real signed EIP-3009 envelope. The web
- * demo doesn't have hardware key custody, so the "Pay" button posts a stub
- * envelope to /x402/settle (which mock-settles by default) and emits the
- * resulting `[ui-action] payment-completed` back into the chat — same shape
- * the Android app will use, so the agent sees one protocol regardless of
- * surface.
+ * Renders an x402 / DPC payment sheet inline in the chat.
+ *
+ * The user selects a payment method before the Pay button activates:
+ *   • Card Wallet  — presents a DPC via Android Credential Manager, then
+ *                    POSTs to /dpc/settle (mock settlement for demo).
+ *   • USDC on Base — StrongBox-backed EIP-3009 on Android, mock-settle on web.
+ *
+ * When `requires_age_verification` is true, an age verification step is shown
+ * first. Both age and payment use Android Credential Manager on device.
  */
 export class PaymentChallenge extends LitElement {
   static properties = {
@@ -16,7 +18,20 @@ export class PaymentChallenge extends LitElement {
     amount_display: {},
     items: { type: Array },
     challenge: { type: Object },
-    status: { state: true },
+    requires_age_verification: { type: Boolean },
+    age_dcql_query_json: {},
+    dpc_dcql_query_json: {},
+    loyalty_discount_pct: { type: Number },
+    loyalty_dcql_query_json: {},
+    // internal
+    payment_method: { state: true }, // null | "card" | "usdc"
+    status: { state: true },         // idle | dpc_pending | paying | done | error
+    age_status: { state: true },     // idle | verifying | verified | failed
+    loyalty_status: { state: true }, // idle | verifying | verified | failed
+    discount_amount: { state: true },
+    effective_total: { state: true },
+    effective_challenge: { state: true },
+    effective_order_id: { state: true },
     error: { state: true },
   };
 
@@ -58,6 +73,150 @@ export class PaymentChallenge extends LitElement {
     .summary { margin-top: 12px; padding-top: 10px; border-top: 1px solid #ece8e0; }
     .total { border-top: 1px solid #ece8e0; margin-top: 6px; padding-top: 10px; font-weight: 600; }
     .total .amt { font-size: 15px; }
+
+    /* ── age verification section ── */
+    .age-section {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #ece8e0;
+      background: #faf9f7;
+    }
+    .age-section.verified {
+      border-color: #c3e6cb;
+      background: #f4fdf6;
+    }
+    .age-section.failed {
+      border-color: #f5c6cb;
+      background: #fff5f5;
+    }
+    .age-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .age-icon { font-size: 20px; line-height: 1; flex-shrink: 0; }
+    .age-text { flex: 1; }
+    .age-title { font-size: 13px; font-weight: 600; color: #1B1B1F; }
+    .age-subtitle { font-size: 11.5px; color: #8a8790; margin-top: 2px; }
+    .age-subtitle.fail { color: #b22; }
+    .verify-btn {
+      margin-top: 10px;
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 0;
+      background: #1B1B1F;
+      color: #fff;
+      font: inherit;
+      font-weight: 600;
+      font-size: 13.5px;
+      cursor: pointer;
+      transition: transform .08s, opacity .15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .verify-btn:active:not(:disabled) { transform: scale(0.985); }
+    .verify-btn:disabled { opacity: .55; cursor: default; }
+
+    /* ── loyalty section ── */
+    .loyalty-section {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1.5px dashed #d4b96a;
+      background: #fffbf0;
+    }
+    .loyalty-section.verified {
+      border: 1.5px solid #c3a73a;
+      background: #fffbf0;
+    }
+    .loyalty-row { display: flex; align-items: center; gap: 10px; }
+    .loyalty-icon { font-size: 20px; flex-shrink: 0; line-height: 1; }
+    .loyalty-text { flex: 1; }
+    .loyalty-title { font-size: 13px; font-weight: 600; color: #1B1B1F; }
+    .loyalty-subtitle { font-size: 11.5px; color: #8a8790; margin-top: 2px; }
+    .loyalty-pill {
+      font-size: 10px; font-weight: 700; letter-spacing: .3px;
+      text-transform: uppercase; padding: 3px 8px;
+      border-radius: 999px; background: #f5d87a; color: #6b4e00;
+      flex-shrink: 0;
+    }
+    .loyalty-btn {
+      margin-top: 10px; width: 100%;
+      padding: 10px 14px; border-radius: 10px; border: 0;
+      background: #1B1B1F; color: #fff;
+      font: inherit; font-weight: 600; font-size: 13.5px;
+      cursor: pointer; transition: transform .08s, opacity .15s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .loyalty-btn:active:not(:disabled) { transform: scale(0.985); }
+    .loyalty-btn:disabled { opacity: .55; cursor: default; }
+    .loyalty-discount-row {
+      display: flex; justify-content: space-between;
+      padding: 6px 0; font-size: 13.5px; color: #2d7a2d; font-weight: 600;
+    }
+
+    /* ── payment method selector ── */
+    .method-section { margin-top: 16px; }
+    .section-label {
+      font-size: 10.5px;
+      color: #8a8790;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .method-cards { display: flex; flex-direction: column; gap: 8px; }
+    .method-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1.5px solid #ece8e0;
+      background: #faf9f7;
+      cursor: pointer;
+      transition: border-color .15s, background .15s, transform .08s;
+      text-align: left;
+      width: 100%;
+      font: inherit;
+    }
+    .method-card.selected {
+      border-color: var(--a2ui-color-accent, #5B6CFF);
+      background: #f0f1ff;
+    }
+    .method-card:active { transform: scale(0.99); }
+    .method-card:disabled { opacity: .55; cursor: default; }
+    .method-icon {
+      font-size: 22px;
+      flex-shrink: 0;
+      width: 32px;
+      text-align: center;
+      line-height: 1;
+    }
+    .method-info { flex: 1; min-width: 0; }
+    .method-name { font-size: 13.5px; font-weight: 600; color: #1B1B1F; }
+    .method-desc { font-size: 11.5px; color: #8a8790; margin-top: 2px; }
+    .method-check {
+      width: 20px; height: 20px;
+      border-radius: 999px;
+      border: 1.5px solid #ccc;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      font-size: 11px;
+      transition: background .15s, border-color .15s, color .15s;
+    }
+    .method-card.selected .method-check {
+      background: var(--a2ui-color-accent, #5B6CFF);
+      border-color: var(--a2ui-color-accent, #5B6CFF);
+      color: #fff;
+    }
+
+    /* ── pay button ── */
     .pay {
       margin-top: 14px; width: 100%;
       padding: 13px 18px; border-radius: 14px; border: 0;
@@ -69,7 +228,7 @@ export class PaymentChallenge extends LitElement {
       display: flex; align-items: center; justify-content: center; gap: 8px;
     }
     .pay:active:not(:disabled) { transform: scale(0.985); }
-    .pay:disabled { opacity: .55; cursor: default; }
+    .pay:disabled { opacity: .45; cursor: default; box-shadow: none; }
     .hint { margin-top: 8px; font-size: 11.5px; color: #8a8790; text-align: center; line-height: 1.5; }
     .err { margin-top: 10px; font-size: 12px; color: #b22; }
     .dot { width: 8px; height: 8px; border-radius: 999px; background: #5B6CFF; box-shadow: 0 0 0 4px rgba(91,108,255,0.18); }
@@ -77,60 +236,294 @@ export class PaymentChallenge extends LitElement {
 
   constructor() {
     super();
-    this.status = "idle"; // idle | paying | done | error
+    this.payment_method = null;
+    this.status = "idle";
+    this.age_status = "idle";
+    this.loyalty_status = "idle";
+    this.discount_amount = 0;
+    this.effective_total = null;   // null = use amount_display from server
+    this.effective_challenge = null;
+    this.effective_order_id = null;
     this.error = "";
   }
 
+  // The order_id / challenge to actually use for settlement (may be updated after loyalty).
+  get _orderId() { return this.effective_order_id ?? this.order_id; }
+  get _challenge() { return this.effective_challenge ?? this.challenge; }
+
+  get _payEnabled() {
+    if (!this.payment_method) return false;
+    if (this.requires_age_verification && this.age_status !== "verified") return false;
+    return this.status === "idle" || this.status === "error";
+  }
+
+  get _payLabel() {
+    if (this.status === "dpc_pending") return "Authorizing card…";
+    if (this.status === "paying") {
+      return this.payment_method === "usdc" ? "Settling on-chain…" : "Processing payment…";
+    }
+    if (this.status === "done") return "Paid ✓";
+    if (!this.payment_method) return "Select a payment method";
+    if (this.payment_method === "card") return "Pay with Card";
+    return `Pay ${this.amount_display} · USDC`;
+  }
+
+  get _hint() {
+    if (!this.payment_method) return "Choose a payment method above to continue.";
+    if (this.payment_method === "card") {
+      return "Your digital payment card is presented securely via Android Credential Manager.";
+    }
+    return "On Android, payment is signed with your StrongBox-backed wallet key (EIP-3009).";
+  }
+
   render() {
+    const displayTotal = this.effective_total != null
+      ? `$${this.effective_total.toFixed(2)}`
+      : this.amount_display;
     return html`
       <button class="close" aria-label="Close" @click=${this._close}>✕</button>
-      <div class="badge">x402 · USDC payment</div>
+      <div class="badge">Payment</div>
       <div class="label">${this.label || "Confirm payment"}</div>
-      <div class="meta">${this.challenge?.network || ""} · ${this.amount_display}</div>
+      <div class="meta">${this._challenge?.network || ""} · ${displayTotal}</div>
 
       <div class="summary">
         ${(this.items || []).map(li => html`
           <div class="row"><span>${li.label}</span><span>$${li.amount.toFixed(2)}</span></div>
         `)}
-        <div class="row total"><span>Total</span><span class="amt">${this.amount_display}</span></div>
+        ${this.discount_amount > 0 ? html`
+          <div class="loyalty-discount-row">
+            <span>Loyalty discount (10%)</span><span>−$${this.discount_amount.toFixed(2)}</span>
+          </div>
+        ` : null}
+        <div class="row total"><span>Total</span><span class="amt">${displayTotal}</span></div>
       </div>
+
+      ${this.requires_age_verification ? this._renderAgeSection() : null}
+      ${this.loyalty_discount_pct ? this._renderLoyaltySection() : null}
+      ${this._renderMethodSection()}
 
       <button
         class="pay"
-        ?disabled=${this.status !== "idle"}
+        ?disabled=${!this._payEnabled}
         @click=${this._pay}
       >
-        <span class="dot"></span>
-        ${this.status === "idle" ? `Pay ${this.amount_display}` :
-          this.status === "paying" ? "Settling on-chain…" :
-          this.status === "done" ? "Paid ✓" : "Try again"}
+        ${this.status === "idle" || this.status === "error" ? html`<span class="dot"></span>` : null}
+        ${this._payLabel}
       </button>
       ${this.error ? html`<div class="err">${this.error}</div>` : null}
-      <div class="hint">
-        On Android, this taps the StrongBox-backed wallet for a hardware-signed
-        EIP-3009 authorization. On the web, settlement is mocked for the demo.
-      </div>
+      <div class="hint">${this._hint}</div>
     `;
   }
 
+  _renderAgeSection() {
+    const s = this.age_status;
+    if (s === "verified") {
+      return html`
+        <div class="age-section verified">
+          <div class="age-row">
+            <div class="age-icon">✅</div>
+            <div class="age-text">
+              <div class="age-title">Age verified</div>
+              <div class="age-subtitle">Your digital ID was confirmed</div>
+            </div>
+          </div>
+        </div>`;
+    }
+    return html`
+      <div class="age-section ${s === "failed" ? "failed" : ""}">
+        <div class="age-row">
+          <div class="age-icon">${s === "failed" ? "❌" : "🪪"}</div>
+          <div class="age-text">
+            <div class="age-title">Age verification required</div>
+            <div class="age-subtitle ${s === "failed" ? "fail" : ""}">
+              ${s === "failed"
+                ? "Verification failed. Please try again."
+                : "This product requires proof of age to purchase."}
+            </div>
+          </div>
+        </div>
+        <button
+          class="verify-btn"
+          ?disabled=${s === "verifying"}
+          @click=${this._verifyAge}
+        >
+          ${s === "verifying" ? "Verifying…" : s === "failed" ? "Try again" : "Verify Age with Wallet"}
+        </button>
+      </div>`;
+  }
+
+  _renderMethodSection() {
+    const disabled = this.status === "paying" || this.status === "dpc_pending" || this.status === "done";
+    return html`
+      <div class="method-section">
+        <div class="section-label">Payment method</div>
+        <div class="method-cards">
+          ${this._renderMethodCard("card", "💳", "Card Wallet", "Pay with your digital payment credential", disabled)}
+          ${this._renderMethodCard("usdc", "⟠", "USDC on Base", "On-chain transfer · no card needed", disabled)}
+        </div>
+      </div>`;
+  }
+
+  _renderMethodCard(value, icon, name, desc, disabled) {
+    const selected = this.payment_method === value;
+    return html`
+      <button
+        class="method-card ${selected ? "selected" : ""}"
+        ?disabled=${disabled}
+        @click=${() => this._selectMethod(value)}
+      >
+        <div class="method-icon">${icon}</div>
+        <div class="method-info">
+          <div class="method-name">${name}</div>
+          <div class="method-desc">${desc}</div>
+        </div>
+        <div class="method-check">${selected ? "✓" : ""}</div>
+      </button>`;
+  }
+
+  _selectMethod(value) {
+    if (this.status === "paying" || this.status === "dpc_pending" || this.status === "done") return;
+    this.payment_method = value;
+    this.status = "idle";
+    this.error = "";
+  }
+
+  _renderLoyaltySection() {
+    const s = this.loyalty_status;
+    if (s === "verified") {
+      return html`
+        <div class="loyalty-section verified">
+          <div class="loyalty-row">
+            <div class="loyalty-icon">🎫</div>
+            <div class="loyalty-text">
+              <div class="loyalty-title">Loyalty discount applied</div>
+              <div class="loyalty-subtitle">10% off your order total</div>
+            </div>
+            <div class="loyalty-pill">−10%</div>
+          </div>
+        </div>`;
+    }
+    return html`
+      <div class="loyalty-section ${s === "failed" ? "border-red" : ""}">
+        <div class="loyalty-row">
+          <div class="loyalty-icon">🎫</div>
+          <div class="loyalty-text">
+            <div class="loyalty-title">Lumen Member? Save 10%</div>
+            <div class="loyalty-subtitle">
+              ${s === "failed"
+                ? "Could not verify membership. Try again or skip."
+                : "Present your digital membership card for an instant discount."}
+            </div>
+          </div>
+          <div class="loyalty-pill">${this.loyalty_discount_pct}% off</div>
+        </div>
+        <button
+          class="loyalty-btn"
+          ?disabled=${s === "verifying"}
+          @click=${this._applyLoyalty}
+        >
+          ${s === "verifying" ? "Verifying…" : s === "failed" ? "Try again" : "Apply Member Discount"}
+        </button>
+      </div>`;
+  }
+
   _close() {
-    window.AndroidBridge?.onAction(JSON.stringify({
-      component: "payment-challenge-close",
-    }));
+    window.AndroidBridge?.onAction(JSON.stringify({ component: "payment-challenge-close" }));
+  }
+
+  async _applyLoyalty() {
+    this.loyalty_status = "verifying";
+    this.error = "";
+    if (window.AndroidBridge?.applyLoyalty) {
+      const cb = `__loyalty_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+      window[cb] = (result) => {
+        delete window[cb];
+        if (!result || result.cancelled || result.error) {
+          this.loyalty_status = "failed";
+          return;
+        }
+        this._onLoyaltyApplied(result);
+      };
+      try {
+        window.AndroidBridge.applyLoyalty(this._orderId, this.loyalty_dcql_query_json || "", cb);
+      } catch (e) {
+        delete window[cb];
+        this.loyalty_status = "failed";
+      }
+    } else {
+      // Web fallback: call backend directly.
+      try {
+        const res = await fetch("/loyalty/apply", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ order_id: this._orderId }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        this._onLoyaltyApplied(data);
+      } catch {
+        this.loyalty_status = "failed";
+      }
+    }
+  }
+
+  _onLoyaltyApplied(data) {
+    this.loyalty_status = "verified";
+    this.discount_amount = data.discount_amount ?? 0;
+    this.effective_total = data.new_total ?? null;
+    if (data.new_order_id) this.effective_order_id = data.new_order_id;
+    if (data.new_challenge) this.effective_challenge = data.new_challenge;
+  }
+
+  async _verifyAge() {
+    this.age_status = "verifying";
+    this.error = "";
+    if (window.AndroidBridge?.verifyAge) {
+      const cb = `__verifyAge_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+      window[cb] = (success) => {
+        delete window[cb];
+        this.age_status = success ? "verified" : "failed";
+      };
+      try {
+        window.AndroidBridge.verifyAge(this.age_dcql_query_json || "", cb);
+      } catch (e) {
+        delete window[cb];
+        this.age_status = "failed";
+      }
+    } else {
+      // Web fallback: grant immediately for demo.
+      await new Promise(r => setTimeout(r, 800));
+      this.age_status = "verified";
+    }
   }
 
   async _pay() {
-    if (this.status !== "idle" && this.status !== "error") return;
-    this.status = "paying";
+    if (!this._payEnabled) return;
     this.error = "";
+    if (this.payment_method === "card") {
+      await this._payWithCard();
+    } else {
+      await this._payWithUsdc();
+    }
+  }
+
+  async _payWithCard() {
+    this.status = "dpc_pending";
+    const authorized = await this._requestDpc();
+    if (!authorized) {
+      this.status = "error";
+      this.error = "Payment authorization was cancelled or declined.";
+      return;
+    }
+    this.status = "paying";
     try {
-      const data = await this._settle();
+      const data = await this._settleDpc();
       this.status = "done";
       window.AndroidBridge?.onAction(JSON.stringify({
         component: "payment-completed",
-        order_id: this.order_id,
+        order_id: this._orderId,
         tx_hash: data.tx_hash,
-        explorer_url: data.explorer_url,
+        explorer_url: data.explorer_url ?? null,
       }));
     } catch (e) {
       this.status = "error";
@@ -138,21 +531,72 @@ export class PaymentChallenge extends LitElement {
     }
   }
 
-  // Two settlement paths:
-  //   - Android WebView: hand the raw *challenge* to Kotlin, which signs
-  //     it with the StrongBox-bound wallet (biometric per op) and POSTs
-  //     the canonical envelope to /x402/settle. The Kotlin side computes
-  //     `from` from the seed; the WebView does not.
-  //   - Browser: no hardware key custody, so post a stub envelope to
-  //     /x402/settle. The backend mock-settles by default; flipping
-  //     X402_SETTLE_REAL=1 would reject this with `invalid_exact_evm_signature`,
-  //     which is the correct production behavior — the browser path is
-  //     for demo-mode only.
+  _settleDpc() {
+    if (window.AndroidBridge?.settleDpc) {
+      return new Promise((resolve, reject) => {
+        const cb = `__dpcSettle_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+        window[cb] = (result) => {
+          delete window[cb];
+          if (!result) return reject(new Error("empty bridge response"));
+          if (result.error) return reject(new Error(result.error));
+          resolve(result);
+        };
+        try {
+          window.AndroidBridge.settleDpc(this._orderId, cb);
+        } catch (e) {
+          delete window[cb];
+          reject(e);
+        }
+      });
+    }
+    // Web fallback: direct fetch (works when served over HTTP).
+    return fetch("/dpc/settle", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ order_id: this._orderId }),
+    }).then(res => {
+      if (!res.ok) return res.text().then(t => { throw new Error(`HTTP ${res.status}: ${t}`); });
+      return res.json();
+    });
+  }
+
+  async _payWithUsdc() {
+    this.status = "paying";
+    try {
+      const data = await this._settle();
+      this.status = "done";
+      window.AndroidBridge?.onAction(JSON.stringify({
+        component: "payment-completed",
+        order_id: this._orderId,
+        tx_hash: data.tx_hash,
+        explorer_url: data.explorer_url ?? null,
+      }));
+    } catch (e) {
+      this.status = "error";
+      this.error = e.message || String(e);
+    }
+  }
+
+  _requestDpc() {
+    return new Promise((resolve) => {
+      if (window.AndroidBridge?.verifyDpc) {
+        const cb = `__dpc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+        window[cb] = (success) => { delete window[cb]; resolve(!!success); };
+        try {
+          window.AndroidBridge.verifyDpc(this.dpc_dcql_query_json || "", cb);
+        } catch (e) {
+          delete window[cb];
+          resolve(false);
+        }
+      } else {
+        // Web fallback: grant immediately for demo.
+        setTimeout(() => resolve(true), 600);
+      }
+    });
+  }
+
   async _settle() {
     if (window.AndroidBridge?.settle) {
-      // The challenge prop is the full backend dict (chain_id, asset,
-      // pay_to, amount_units, valid_after/before, nonce, extra). Hand it
-      // to Kotlin verbatim; the signer reads the fields it needs.
       return new Promise((resolve, reject) => {
         const cb = `__settle_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
         window[cb] = (result) => {
@@ -162,7 +606,7 @@ export class PaymentChallenge extends LitElement {
           resolve(result);
         };
         try {
-          window.AndroidBridge.settle(this.order_id, JSON.stringify(this.challenge || {}), cb);
+          window.AndroidBridge.settle(this._orderId, JSON.stringify(this._challenge || {}), cb);
         } catch (e) {
           delete window[cb];
           reject(e);
@@ -172,13 +616,13 @@ export class PaymentChallenge extends LitElement {
     const stubEnvelope = {
       scheme: "exact",
       kind: "stub-web",
-      order_id: this.order_id,
-      nonce: this.challenge?.nonce,
+      order_id: this._orderId,
+      nonce: this._challenge?.nonce,
     };
     const res = await fetch("/x402/settle", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ order_id: this.order_id, envelope: stubEnvelope }),
+      body: JSON.stringify({ order_id: this._orderId, envelope: stubEnvelope }),
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => "");

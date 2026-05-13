@@ -245,7 +245,7 @@ class GiftAgent:
                         tool_content = await _call_mcp_tool(name, args)
 
                     else:
-                        output = run_tool(name, args)
+                        output = await run_tool(name, args)
                         if "_a2ui" in output:
                             yield AgentEvent("a2ui", output["_a2ui"])
                             tool_content = json.dumps({"rendered": True})

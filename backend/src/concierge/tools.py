@@ -1,7 +1,25 @@
 from __future__ import annotations
 from typing import Any
 from datetime import date, timedelta
+import json
+import os
 from concierge import catalog, a2ui, payments
+
+MCP_URL = os.environ.get("MCP_URL", "http://localhost:3001/mcp")
+
+
+async def _call_mcp(tool: str, args: dict[str, Any]) -> dict[str, Any]:
+    """Call a single MCP tool and return its parsed JSON result."""
+    from fastmcp import Client as McpClient
+    from fastmcp.exceptions import ToolError
+    try:
+        async with McpClient(MCP_URL) as mcp:
+            result = await mcp.call_tool(tool, args)
+        items = result.content if hasattr(result, "content") else result
+        parts = [item.text if hasattr(item, "text") else str(item) for item in items]
+        return json.loads("\n".join(parts) if parts else "{}")
+    except ToolError as exc:
+        return {"success": False, "error": str(exc)}
 
 TOOL_SCHEMAS: list[dict[str, Any]] = [
     {
@@ -11,7 +29,7 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "category": {"type": "string",
-                             "enum": ["jewelry", "home", "stationery", "skincare"]},
+                             "enum": ["jewelry", "home", "stationery", "skincare", "beverages"]},
                 "price_max": {"type": "number"},
                 "vibe_tags": {"type": "array", "items": {"type": "string"}},
             },
@@ -143,7 +161,7 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
 ]
 
 
-def run_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
+async def run_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
     """Execute a tool. Returns either tool output (for state-changing tools)
     or an A2UI fragment (for present_* tools, prefixed with `_a2ui`)."""
     if name == "search_catalog":
@@ -186,9 +204,18 @@ def run_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             record["total"] = total
             record["ship_date"] = ship_date
             record["product_id"] = product["id"]
+        dcql = await _call_mcp("get_payment_dcql", {
+            "product_id": product["id"],
+            "total_amount": total,
+        })
         return {"_a2ui": a2ui.payment_challenge(
             challenge=challenge,
             line_items=line_items,
+            requires_age_verification=dcql.get("requires_age_verification", False),
+            age_dcql_query_json=dcql.get("age_dcql_query_json"),
+            dpc_dcql_query_json=dcql.get("dpc_dcql_query_json"),
+            loyalty_discount_pct=dcql.get("loyalty_discount_pct", 0),
+            loyalty_dcql_query_json=dcql.get("loyalty_dcql_query_json"),
         )}
     if name == "present_chips":
         return {"_a2ui": a2ui.chips(

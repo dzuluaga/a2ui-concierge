@@ -7,6 +7,7 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.fragment.app.FragmentActivity
 import com.diegoz.a2uiconcierge.BuildConfig
+import com.diegoz.a2uiconcierge.credential.CredentialService
 import com.diegoz.a2uiconcierge.x402.SecureWallet
 import com.diegoz.a2uiconcierge.x402.X402Signer
 import kotlinx.coroutines.CoroutineScope
@@ -89,6 +90,150 @@ class A2uiBridge {
             withContext(Dispatchers.Main) {
                 webView?.evaluateJavascript(
                     "window['${callbackName.replace("'", "")}']($resultJson);",
+                    null,
+                )
+            }
+        }
+    }
+
+    /**
+     * Digital Payment Credential bridge. Called by the payment-challenge
+     * component when the user taps "Pay". Presents the DPC wallet picker via
+     * Android Credential Manager; resolves to true if the wallet returns a
+     * credential, false if cancelled or unavailable.
+     */
+    @JavascriptInterface
+    fun verifyDpc(dcqlQueryJson: String, callbackName: String) {
+        Log.d(TAG, "verifyDpc: cb=$callbackName")
+        scope.launch {
+            val authorized = try {
+                val activity = currentActivity() ?: error("No FragmentActivity in WebView context")
+                val result = CredentialService().requestCredential(activity, dcqlQueryJson)
+                result.token != null
+            } catch (e: Exception) {
+                Log.e(TAG, "verifyDpc failed", e)
+                false
+            }
+
+            withContext(Dispatchers.Main) {
+                webView?.evaluateJavascript(
+                    "window['${callbackName.replace("'", "")}']($authorized);",
+                    null,
+                )
+            }
+        }
+    }
+
+    /**
+     * Loyalty discount bridge. Presents the loyalty credential via Android
+     * Credential Manager; if granted, POSTs the order_id to /loyalty/apply
+     * which rebuilds the x402 challenge at the discounted amount. Calls back
+     * with {new_order_id, new_challenge, discount_amount, new_total} or an
+     * {error} object on failure.
+     */
+    @JavascriptInterface
+    fun applyLoyalty(orderId: String, dcqlQueryJson: String, callbackName: String) {
+        Log.d(TAG, "applyLoyalty: order=$orderId cb=$callbackName")
+        scope.launch {
+            val resultJson = try {
+                val activity = currentActivity() ?: error("No FragmentActivity in WebView context")
+                val result = CredentialService().requestCredential(activity, dcqlQueryJson)
+                if (result.token == null) {
+                    """{"cancelled":true}"""
+                } else {
+                    val body = """{"order_id":"$orderId"}"""
+                    val req = Request.Builder()
+                        .url("$BACKEND_BASE_URL/loyalty/apply")
+                        .post(body.toRequestBody("application/json".toMediaType()))
+                        .build()
+                    http.newCall(req).execute().use { resp ->
+                        val text = resp.body?.string().orEmpty()
+                        if (resp.isSuccessful) text else jsonError("HTTP ${resp.code}: $text")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "applyLoyalty failed", e)
+                jsonError(e.message ?: e::class.java.simpleName)
+            }
+
+            withContext(Dispatchers.Main) {
+                webView?.evaluateJavascript(
+                    "window['${callbackName.replace("'", "")}']($resultJson);",
+                    null,
+                )
+            }
+        }
+    }
+
+    /**
+     * DPC card settlement bridge. Called after verifyDpc succeeds. POSTs the
+     * order_id to /dpc/settle and calls back with the JSON result (same shape
+     * as /x402/settle: {order_id, tx_hash, explorer_url}).
+     */
+    @JavascriptInterface
+    fun settleDpc(orderId: String, callbackName: String) {
+        Log.d(TAG, "settleDpc: order=$orderId cb=$callbackName")
+        scope.launch {
+            val resultJson = try {
+                val body = """{"order_id":"$orderId"}"""
+                val req = Request.Builder()
+                    .url("$BACKEND_BASE_URL/dpc/settle")
+                    .post(body.toRequestBody("application/json".toMediaType()))
+                    .build()
+                http.newCall(req).execute().use { resp ->
+                    val text = resp.body?.string().orEmpty()
+                    if (resp.isSuccessful) text else jsonError("HTTP ${resp.code}: $text")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "settleDpc failed", e)
+                jsonError(e.message ?: e::class.java.simpleName)
+            }
+
+            withContext(Dispatchers.Main) {
+                webView?.evaluateJavascript(
+                    "window['${callbackName.replace("'", "")}']($resultJson);",
+                    null,
+                )
+            }
+        }
+    }
+
+    /**
+     * Age verification bridge. The JS payment-challenge component calls this
+     * when the user taps "Verify Age". We invoke Android Credential Manager,
+     * POST the VP token to /verify-age, and call back into JS with the boolean.
+     */
+    @JavascriptInterface
+    fun verifyAge(dcqlQueryJson: String, callbackName: String) {
+        Log.d(TAG, "verifyAge: cb=$callbackName")
+        scope.launch {
+            val verified = try {
+                val activity = currentActivity() ?: error("No FragmentActivity in WebView context")
+                val result = CredentialService().requestCredential(activity, dcqlQueryJson)
+                if (result.token != null) {
+                    val body = JSONObject().apply {
+                        put("credentialToken", result.token)
+                        put("dcqlQueryJson", dcqlQueryJson)
+                    }.toString()
+                    val req = Request.Builder()
+                        .url("$BACKEND_BASE_URL/verify-age")
+                        .post(body.toRequestBody("application/json".toMediaType()))
+                        .build()
+                    http.newCall(req).execute().use { resp ->
+                        val text = resp.body?.string().orEmpty()
+                        resp.isSuccessful && JSONObject(text).optBoolean("verified", false)
+                    }
+                } else {
+                    false // cancelled or no token
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "verifyAge failed", e)
+                false
+            }
+
+            withContext(Dispatchers.Main) {
+                webView?.evaluateJavascript(
+                    "window['${callbackName.replace("'", "")}']($verified);",
                     null,
                 )
             }

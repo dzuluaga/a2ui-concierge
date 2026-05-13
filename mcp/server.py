@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 from typing import Any
 
 from fastmcp import FastMCP
@@ -16,6 +17,45 @@ _drafts: dict[str, dict[str, Any]] = {}
 def _label_for(key: str) -> str:
     defn = next((d for d in CREDENTIAL_DEFINITIONS if d.key == key), None)
     return defn.label if defn else key
+
+
+# ── get_payment_dcql ─────────────────────────────────────────────────────────
+
+@mcp.tool()
+def get_payment_dcql(product_id: str, total_amount: float) -> dict[str, Any]:
+    """Returns all DCQL queries needed for the payment sheet of a product:
+    age verification (if the product requires it), loyalty membership (if the
+    product offers a discount), and DPC payment credential (always). The
+    backend embeds these JSON strings directly into the payment-challenge A2UI
+    fragment so the Android client can drive each credential request."""
+    product = get_product(product_id)
+    if product is None:
+        return {"success": False, "error": f"Product not found: {product_id}"}
+
+    required = product.get("required_credentials", [])
+    requires_age = "age_verification" in required
+    loyalty_discount_pct = product.get("loyalty_discount_pct", 0)
+
+    result: dict[str, Any] = {
+        "success": True,
+        "requires_age_verification": requires_age,
+        "loyalty_discount_pct": loyalty_discount_pct,
+        "dpc_dcql_query_json": json.dumps(
+            build_checkout_verification_dcql(total_amount, ["dpc_payment"], CREDENTIAL_DEFINITIONS)
+        ),
+    }
+
+    if requires_age:
+        result["age_dcql_query_json"] = json.dumps(
+            build_checkout_verification_dcql(total_amount, ["age_verification"], CREDENTIAL_DEFINITIONS)
+        )
+
+    if loyalty_discount_pct:
+        result["loyalty_dcql_query_json"] = json.dumps(
+            build_checkout_verification_dcql(total_amount, ["loyalty_membership"], CREDENTIAL_DEFINITIONS)
+        )
+
+    return result
 
 
 # ── prepare_checkout ──────────────────────────────────────────────────────────
