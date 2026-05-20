@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:android": "vite build && cp dist/a2ui-host.iife.js ../app/app/src/main/assets/a2ui-host.js && cp index-android.html ../app/app/src/main/assets/host.html"
+    "build:android": "vite build && cp dist/a2ui-host.iife.js ../app/androidApp/src/main/assets/a2ui-host.js && cp index-android.html ../app/androidApp/src/main/assets/host.html"
   },
   "dependencies": { "lit": "^3.3.2" },
   "devDependencies": { "vite": "^8.0.11" }

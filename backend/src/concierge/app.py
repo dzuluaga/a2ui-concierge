@@ -31,6 +31,7 @@ class CredentialBody(BaseModel):
     credentials: dict[str, bool] = {}   # Fallback booleans (used if token absent)
 
 
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}

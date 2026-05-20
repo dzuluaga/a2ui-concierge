@@ -1,0 +1,4 @@
+
+# mkcert local TLS certificates
+*.pem
+!rootCA.pem

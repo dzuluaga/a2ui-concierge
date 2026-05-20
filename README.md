@@ -162,7 +162,22 @@ a2ui-concierge/
 
 ## Running it
 
-### 1. Backend (required for both clients)
+### 1. MCP server (required for both clients)
+
+The backend delegates credential verification to a FastMCP sidecar that runs on port 3001.
+Start it first:
+
+```shell
+cd mcp
+uv sync
+uv run python server.py
+```
+
+You should see FastMCP output indicating it's listening on `http://0.0.0.0:3001/mcp`.
+
+### 2. Backend (required for both clients)
+
+In a separate terminal:
 
 ```shell
 cd backend
@@ -173,7 +188,10 @@ uv run uvicorn concierge.app:app --port 8000
 
 `/health` should now return `{"status":"ok"}`.
 
-### 2a. Web app
+By default the backend expects the MCP server at `http://localhost:3001/mcp`. Override with
+`MCP_URL=http://...` in `backend/.env` if you run them on different hosts.
+
+### 3a. Web app
 
 ```shell
 cd host-bundle
@@ -184,9 +202,13 @@ npm run dev
 Open `http://localhost:5173`. The Vite dev server proxies `/chat` to the backend
 automatically — no extra configuration needed. Try: *"a necklace under 200 for my sister"*.
 
-### 2b. Android app
+### 3b. Android app
 
-Build the host bundle into Android assets, then install:
+#### Emulator (default)
+
+The default `BACKEND_BASE_URL` in [`androidApp/build.gradle.kts`](app/androidApp/build.gradle.kts)
+points to `http://10.0.2.2:8000`, which is the emulator's alias for the host loopback. No
+extra configuration needed.
 
 ```shell
 cd host-bundle && npm install && npm run build:android
@@ -194,16 +216,45 @@ cd ../app && ./gradlew :app:installDebug
 adb shell am start -n com.diegoz.a2uiconcierge/.MainActivity
 ```
 
-The emulator reaches the host backend at `10.0.2.2:8000` automatically. For a **physical
-phone**, forward the port first:
+#### Physical device (USB)
+
+Forward the backend port to the device, then build and install as above:
 
 ```shell
 adb reverse tcp:8000 tcp:8000
 ```
 
+Then change `BACKEND_BASE_URL` in `androidApp/build.gradle.kts` to `http://localhost:8000`
+and rebuild:
+
+```shell
+cd host-bundle && npm run build:android
+cd ../app && ./gradlew :app:installDebug
+```
+
+#### Physical device (Wi-Fi, no USB)
+
+If you can't use USB, set `BACKEND_BASE_URL` in `androidApp/build.gradle.kts` to your
+machine's LAN IP (e.g. `http://192.168.1.x:8000`) and rebuild. The backend already binds to
+`0.0.0.0` so it's reachable over the local network — check your firewall if connections fail.
+
 After any change to a Lit component, re-run `npm run build:android` and reinstall the APK
 to refresh the WebView assets. The Compose-side code reloads via Android Studio in the
 normal way.
+
+### 3c. iOS app (simulator)
+
+```shell
+cd host-bundle && npm install && npm run build:android   # reuses the same Lit bundle
+cd ../app && ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64
+open iosApp/iosApp.xcodeproj
+```
+
+Run the `iosApp` scheme in Xcode on a Simulator. The default `BACKEND_BASE_URL` in
+[`MainViewController.kt`](app/shared/src/iosMain/kotlin/com/diegoz/a2uiconcierge/ui/MainViewController.kt)
+is `http://localhost:8000`, which routes to the host machine from the simulator automatically.
+
+For a **physical iOS device**, change the constant to your machine's LAN IP before building.
 
 ## Demo script
 
@@ -227,7 +278,7 @@ A 90-second walkthrough lives in `docs/runbook.md`. Short version:
 
 - Catalog is a mock JSON file; ordering writes to memory only.
 - Single conversation per session id; no persistence.
-- Android only (no iOS yet — see [`feat/kmp`](#) for the in-progress KMP migration).
+- iOS support is in progress on this branch (`feat/migrate-kmp`); not yet merged to `main`.
 - WebView clipping math depends on `devicePixelRatio`; tested on Pixel 9 Pro XL.
 
 ## License

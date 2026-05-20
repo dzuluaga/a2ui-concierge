@@ -16,4 +16,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "a2ui-concierge"
-include(":app")
+include(":androidApp", ":shared")
