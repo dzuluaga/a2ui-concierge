@@ -1,42 +1,46 @@
-"""A2UI v0.8 message builders for the Lumen Concierge custom catalog.
+"""A2UI v0.8 message builders.
 
 Each builder returns a list of v0.8 protocol messages — typically a
 ``surfaceUpdate`` followed by a ``beginRendering`` — so each agent bubble
-is a self-contained surface with a fresh ``surfaceId`` and a single root
-component drawn from the custom catalog ``lumen.com:concierge/v1``.
+is a self-contained surface with a fresh ``surfaceId``.
 
-Wire shape (v0.8, server-to-client):
+Two catalogs are used:
 
-    {"surfaceUpdate": {
-        "surfaceId": "s-...",
-        "components": [
-            {"id": "c-root", "component": {
-                "ChipGroup": {
-                    "question": {"literalString": "..."},
-                    "options":  [{"value": "...", "label": {"literalString": "..."}}],
-                    "selections": {"literalArray": []},
-                    "maxAllowedSelections": 1,
-                    "variant": "chips",
-                    "action": {"name": "chip-group"}
-                }
-            }}
-        ]
-    }}
-    {"beginRendering": {"surfaceId": "s-...", "root": "c-root",
-                         "catalogId": "lumen.com:concierge/v1"}}
+* **Standard v0.8 catalog** (``STANDARD_CATALOG_ID``) — simple bubbles that
+  compose ``Text``, ``Image``, ``Row``, ``Column``, ``Card``, ``Button``,
+  ``CheckBox``, ``TextField``, ``MultipleChoice``. Used by :func:`chips`,
+  :func:`form`, and :func:`confirmation`.
+* **Custom catalog** ``lumen.com:concierge/v1`` (``CATALOG_ID``) — composite
+  components that bundle interaction logic the standard primitives can't
+  express: :func:`products` (``CardGrid``), :func:`product_detail`
+  (``ProductDetail``), :func:`payment_challenge` (``PaymentChallenge`` —
+  the x402 signing UI).
 
-The standard-catalog component shapes are mirrored where applicable
-(``MultipleChoice``/``CheckBox``/``TextField``); higher-level commerce
-components (``CardGrid``, ``ProductDetail``, ``ConciergeForm``,
-``ConfirmationCard``, ``PaymentChallenge``, ``TxDetail``) live in the
-custom catalog. Custom-catalog property schemas are free-form per v0.8
-``catalog_description_schema.json``.
+Wire shape (v0.8, server-to-client) for a standard-catalog chip group::
+
+    {"surfaceUpdate": {"surfaceId": "s-...", "components": [
+        {"id": "col", "component": {"Column": {
+            "children": {"explicitList": ["q", "chips"]}}}},
+        {"id": "q", "component": {"Text": {"text": {"literalString": "..."}}}},
+        {"id": "chips", "component": {"Row": {
+            "children": {"explicitList": ["b1", ...]}}}},
+        {"id": "b1", "component": {"Button": {
+            "child": "b1-label",
+            "action": {"name": "chip-group",
+                       "context": [{"key": "value", "value": {"literalString": "v1"}}]}}}},
+        {"id": "b1-label", "component": {"Text": {"text": {"literalString": "..."}}}}
+    ]}}
+    {"beginRendering": {"surfaceId": "s-...", "root": "col",
+                         "catalogId": STANDARD_CATALOG_ID}}
 """
 from __future__ import annotations
 from typing import Any, Iterable
 import uuid
 
 CATALOG_ID = "lumen.com:concierge/v1"
+STANDARD_CATALOG_ID = (
+    "https://a2ui.org/specification/v0_8/standard_catalog_definition.json"
+)
 
 A2uiMessage = dict[str, Any]
 
@@ -83,20 +87,77 @@ def _wrap_surface(component_type: str, props: dict[str, Any]) -> list[A2uiMessag
     ]
 
 
+def _std_surface(components: list[dict[str, Any]], root_id: str) -> list[A2uiMessage]:
+    """Bundle a standard-catalog component graph as a fresh surface."""
+    surface_id = _new_id("s")
+    return [
+        {"surfaceUpdate": {"surfaceId": surface_id, "components": components}},
+        {"beginRendering": {
+            "surfaceId": surface_id,
+            "root": root_id,
+            "catalogId": STANDARD_CATALOG_ID,
+        }},
+    ]
+
+
+def _std_text(text: str, *, usage_hint: str | None = None) -> tuple[str, dict[str, Any]]:
+    """Return (id, component-def) for a Text component."""
+    cid = _new_id("c")
+    props: dict[str, Any] = {"text": _bind_str(text)}
+    if usage_hint:
+        props["usageHint"] = usage_hint
+    return cid, {"id": cid, "component": {"Text": props}}
+
+
+def _std_button(
+    *, label: str, action_name: str,
+    context: list[dict[str, Any]] | None = None,
+    primary: bool = False,
+) -> tuple[str, list[dict[str, Any]]]:
+    """Return (root-id, [button-def, label-def])."""
+    label_id, label_def = _std_text(label)
+    btn_id = _new_id("c")
+    action: dict[str, Any] = {"name": action_name}
+    if context:
+        action["context"] = context
+    btn_def = {"id": btn_id, "component": {"Button": {
+        "child": label_id,
+        "action": action,
+        **({"primary": True} if primary else {}),
+    }}}
+    return btn_id, [btn_def, label_def]
+
+
 # ── builders ─────────────────────────────────────────────────────────────
 
 
 def chips(*, question: str, options: Iterable[tuple[str, str]]) -> list[A2uiMessage]:
-    return _wrap_surface("ChipGroup", {
-        "question": _bind_str(question),
-        "options": [
-            {"value": v, "label": _bind_str(l)} for v, l in options
-        ],
-        "selections": {"literalArray": []},
-        "maxAllowedSelections": 1,
-        "variant": "chips",
-        "action": {"name": "chip-group"},
-    })
+    """Single-select chip group rendered with standard-catalog primitives.
+
+    Each chip is a Button whose action emits ``chip-group`` with the value
+    bound as a literal — so tapping a chip fires the agent action in one
+    tap (no separate "Continue" button needed)."""
+    col_id = _new_id("c")
+    q_id, q_def = _std_text(question, usage_hint="h4")
+    chip_defs: list[dict[str, Any]] = []
+    chip_ids: list[str] = []
+    for value, label in options:
+        btn_id, defs = _std_button(
+            label=label,
+            action_name="chip-group",
+            context=[{"key": "value", "value": _bind_str(value)}],
+        )
+        chip_ids.append(btn_id)
+        chip_defs.extend(defs)
+    row_id = _new_id("c")
+    row_def = {"id": row_id, "component": {"Row": {
+        "children": {"explicitList": chip_ids},
+    }}}
+    col_def = {"id": col_id, "component": {"Column": {
+        "children": {"explicitList": [q_id, row_id]},
+        "alignment": "stretch",
+    }}}
+    return _std_surface([col_def, q_def, row_def, *chip_defs], col_id)
 
 
 def products(
@@ -147,18 +208,59 @@ def product_detail(
 
 
 def form(*, fields: list[dict[str, Any]]) -> list[A2uiMessage]:
-    return _wrap_surface("ConciergeForm", {
-        "fields": [
-            {
-                "type": f["type"],
-                "name": f["name"],
-                "label": _bind_str(f["label"]),
-                **({"maxLength": f["max_length"]} if "max_length" in f else {}),
+    """Order form composed from standard-catalog primitives.
+
+    Each field's value lives at ``/<name>`` in the surface data model;
+    interactive components (``CheckBox``/``TextField``) two-way bind to
+    those paths. The submit button emits the ``form`` action with
+    ``values`` resolved from path ``/`` so the agent receives the full
+    field bag in one shot.
+    """
+    components: list[dict[str, Any]] = []
+    column_children: list[str] = []
+    for f in fields:
+        name = f["name"]
+        label = f["label"]
+        type_ = f["type"]
+        cid = _new_id("c")
+        if type_ == "toggle":
+            components.append({"id": cid, "component": {"CheckBox": {
+                "label": _bind_str(label),
+                "value": {"path": f"/{name}"},
+            }}})
+        elif type_ == "text":
+            tf_props: dict[str, Any] = {
+                "label": _bind_str(label),
+                "text": {"path": f"/{name}"},
+                "textFieldType": "longText",
             }
-            for f in fields
-        ],
-        "action": {"name": "form"},
-    })
+            components.append({"id": cid, "component": {"TextField": tf_props}})
+        else:
+            # `address` and any other field type render as a shortText
+            # input; saved-address autocomplete UI lived in the custom
+            # component and isn't expressible in the standard catalog.
+            components.append({"id": cid, "component": {"TextField": {
+                "label": _bind_str(label),
+                "text": {"path": f"/{name}"},
+                "textFieldType": "shortText",
+            }}})
+        column_children.append(cid)
+
+    submit_id, submit_defs = _std_button(
+        label="Place order",
+        action_name="form",
+        context=[{"key": "values", "value": {"path": "/"}}],
+        primary=True,
+    )
+    components.extend(submit_defs)
+    column_children.append(submit_id)
+
+    col_id = _new_id("c")
+    col_def = {"id": col_id, "component": {"Column": {
+        "children": {"explicitList": column_children},
+        "alignment": "stretch",
+    }}}
+    return _std_surface([col_def, *components], col_id)
 
 
 def confirmation(
@@ -170,15 +272,64 @@ def confirmation(
     tx_hash: str | None = None,
     explorer_url: str | None = None,
 ) -> list[A2uiMessage]:
-    return _wrap_surface("ConfirmationCard", {
-        "orderId": order_id,
-        "items": [{"label": label, "amount": amount} for label, amount in line_items],
-        "total": total,
-        "shipDate": _bind_str(ship_date),
-        "txHash": _bind_str(tx_hash),
-        "explorerUrl": _bind_str(explorer_url),
-        "action": {"name": "confirmation-card"},
-    })
+    """Order-confirmation card composed from standard-catalog primitives.
+
+    Layout: Card → Column with a header Text, one Row per line item, a
+    total Text, the ship date, and (when a tx hash is present) a Button
+    that fires ``tx-detail-open`` so the host can pop a transaction sheet.
+    """
+    components: list[dict[str, Any]] = []
+    column_children: list[str] = []
+
+    title_id, title_def = _std_text(f"Order {order_id} confirmed", usage_hint="h3")
+    components.append(title_def)
+    column_children.append(title_id)
+
+    for label, amount in line_items:
+        label_id, label_def = _std_text(label)
+        amount_id, amount_def = _std_text(f"${amount:.2f}")
+        row_id = _new_id("c")
+        row_def = {"id": row_id, "component": {"Row": {
+            "children": {"explicitList": [label_id, amount_id]},
+            "distribution": "spaceBetween",
+        }}}
+        components.extend([row_def, label_def, amount_def])
+        column_children.append(row_id)
+
+    total_id, total_def = _std_text(f"Total: ${total:.2f}", usage_hint="h4")
+    components.append(total_def)
+    column_children.append(total_id)
+
+    if ship_date:
+        ship_id, ship_def = _std_text(f"Ships: {ship_date}", usage_hint="caption")
+        components.append(ship_def)
+        column_children.append(ship_id)
+
+    if tx_hash:
+        ctx: list[dict[str, Any]] = [
+            {"key": "order_id", "value": _bind_str(order_id)},
+            {"key": "tx_hash", "value": _bind_str(tx_hash)},
+            {"key": "ship_date", "value": _bind_str(ship_date or "")},
+            {"key": "total", "value": _bind_num(total)},
+        ]
+        if explorer_url:
+            ctx.append({"key": "explorer_url", "value": _bind_str(explorer_url)})
+        btn_id, btn_defs = _std_button(
+            label="View transaction",
+            action_name="tx-detail-open",
+            context=ctx,
+        )
+        components.extend(btn_defs)
+        column_children.append(btn_id)
+
+    col_id = _new_id("c")
+    col_def = {"id": col_id, "component": {"Column": {
+        "children": {"explicitList": column_children},
+        "alignment": "stretch",
+    }}}
+    card_id = _new_id("c")
+    card_def = {"id": card_id, "component": {"Card": {"child": col_id}}}
+    return _std_surface([card_def, col_def, *components], card_id)
 
 
 def payment_challenge(
@@ -224,14 +375,66 @@ def tx_detail(
     pay_to: str | None = None,
     amount_display: str | None = None,
 ) -> list[A2uiMessage]:
-    return _wrap_surface("TxDetail", {
-        "orderId": order_id,
-        "txHash": _bind_str(tx_hash),
-        "explorerUrl": _bind_str(explorer_url),
-        "network": _bind_str(network),
-        "amountDisplay": _bind_str(amount_display),
-        "total": _bind_num(total),
-        "items": [{"label": label, "amount": amount} for label, amount in items],
-        "shipDate": _bind_str(ship_date),
-        "payTo": _bind_str(pay_to),
-    })
+    """Transaction-detail card composed from standard-catalog primitives.
+
+    Mirrors the client-side synthesizer in the Android host. Each labelled
+    field is a Row(Text label, Text value); items are listed inline; a
+    Close button emits ``tx-detail-close`` so the host can dismiss the
+    sheet.
+    """
+    components: list[dict[str, Any]] = []
+    column_children: list[str] = []
+
+    title_id, title_def = _std_text("Transaction details", usage_hint="h3")
+    components.append(title_def)
+    column_children.append(title_id)
+
+    def _row(label: str, value: str) -> None:
+        l_id, l_def = _std_text(label, usage_hint="caption")
+        v_id, v_def = _std_text(value)
+        row_id = _new_id("c")
+        row_def = {"id": row_id, "component": {"Row": {
+            "children": {"explicitList": [l_id, v_id]},
+            "distribution": "spaceBetween",
+        }}}
+        components.extend([row_def, l_def, v_def])
+        column_children.append(row_id)
+
+    _row("Order", order_id)
+    if network:
+        _row("Network", network)
+    if amount_display:
+        _row("Amount", amount_display)
+    elif total is not None:
+        _row("Total", f"${total:.2f}")
+    if tx_hash:
+        _row("Tx hash", tx_hash)
+    if pay_to:
+        _row("Paid to", pay_to)
+    if ship_date:
+        _row("Ships", ship_date)
+    for label, amount in items:
+        _row(label, f"${amount:.2f}")
+
+    close_id, close_defs = _std_button(label="Close", action_name="tx-detail-close")
+    components.extend(close_defs)
+    column_children.append(close_id)
+
+    if explorer_url:
+        explore_id, explore_defs = _std_button(
+            label="Open in explorer",
+            action_name="tx-detail-open",
+            context=[{"key": "explorer_url", "value": _bind_str(explorer_url)}],
+            primary=True,
+        )
+        components.extend(explore_defs)
+        column_children.append(explore_id)
+
+    col_id = _new_id("c")
+    col_def = {"id": col_id, "component": {"Column": {
+        "children": {"explicitList": column_children},
+        "alignment": "stretch",
+    }}}
+    card_id = _new_id("c")
+    card_def = {"id": card_id, "component": {"Card": {"child": col_id}}}
+    return _std_surface([card_def, col_def, *components], card_id)

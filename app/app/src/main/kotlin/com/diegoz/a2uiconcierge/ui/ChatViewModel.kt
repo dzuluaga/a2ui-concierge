@@ -249,45 +249,159 @@ class ChatViewModel(private val repo: ChatRepository) : ViewModel() {
     }
 
     /**
-     * Build a synthetic A2UI surface bundle for a TxDetail bubble from
-     * the tx-detail-open action's context. Uses the same v0.8 wire shape
-     * (surfaceUpdate + beginRendering) so the same WebView interpreter
-     * renders the modal sheet without a server round-trip.
+     * Build a synthetic A2UI surface bundle for a transaction-detail
+     * bubble from the ``tx-detail-open`` action's context. Uses the
+     * **standard v0.8 catalog** — a Card wrapping a Column of labelled
+     * Rows plus a Close button — so the WebView's standard-catalog
+     * renderer paints it without any custom-component coupling. Mirrors
+     * the Python ``a2ui.tx_detail`` builder.
      */
     private fun buildTxDetailSurface(context: JsonObject): List<JsonObject> {
-        val sid = "tx-${UUID.randomUUID().toString().take(8)}"
-        val rid = "c-tx-${UUID.randomUUID().toString().take(6)}"
-        // Wrap a string into a v0.8 BoundValue. Source strings that aren't
-        // present are simply omitted from the props map — an empty object
-        // is *not* a valid BoundValue and the shim would resolve it as a
-        // truthy literal, breaking string-typed props in the WebView.
-        fun bound(v: String): JsonElement =
-            JsonObject(mapOf("literalString" to JsonPrimitive(v)))
-        val props = LinkedHashMap<String, JsonElement>()
-        props["orderId"] = context["order_id"] ?: JsonPrimitive("")
-        context["tx_hash"]?.jsonPrimitive?.contentOrNull?.let { props["txHash"] = bound(it) }
-        context["explorer_url"]?.jsonPrimitive?.contentOrNull?.let { props["explorerUrl"] = bound(it) }
-        context["ship_date"]?.jsonPrimitive?.contentOrNull?.let { props["shipDate"] = bound(it) }
-        context["items"]?.let { props["items"] = it }
-        context["total"]?.let { props["total"] = it }
-        val component = JsonObject(mapOf("TxDetail" to JsonObject(props)))
-        val componentDef = JsonObject(mapOf(
-            "id" to JsonPrimitive(rid),
-            "component" to component,
-        ))
-        val surfaceUpdate = JsonObject(mapOf(
-            "surfaceUpdate" to JsonObject(mapOf(
-                "surfaceId" to JsonPrimitive(sid),
-                "components" to JsonArray(listOf(componentDef)),
+        val builder = StandardSurface()
+        val column = mutableListOf<String>()
+
+        column.add(builder.text("Transaction details", usageHint = "h3"))
+
+        fun row(label: String, value: String?) {
+            if (value.isNullOrBlank()) return
+            val lid = builder.text(label, usageHint = "caption")
+            val vid = builder.text(value)
+            column.add(builder.row(listOf(lid, vid), distribution = "spaceBetween"))
+        }
+
+        row("Order", context["order_id"]?.jsonPrimitive?.contentOrNull)
+        row("Tx hash", context["tx_hash"]?.jsonPrimitive?.contentOrNull)
+        context["total"]?.let { total ->
+            val n = (total as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()
+            if (n != null) row("Total", "$" + String.format("%.2f", n))
+        }
+        row("Ships", context["ship_date"]?.jsonPrimitive?.contentOrNull)
+
+        column.add(builder.button("Close", actionName = "tx-detail-close"))
+        context["explorer_url"]?.jsonPrimitive?.contentOrNull?.let { url ->
+            column.add(builder.button(
+                "Open in explorer",
+                actionName = "tx-detail-open",
+                context = mapOf("explorer_url" to url),
+                primary = true,
             ))
-        ))
-        val beginRendering = JsonObject(mapOf(
-            "beginRendering" to JsonObject(mapOf(
-                "surfaceId" to JsonPrimitive(sid),
-                "root" to JsonPrimitive(rid),
-                "catalogId" to JsonPrimitive("lumen.com:concierge/v1"),
+        }
+
+        val colId = builder.column(column, alignment = "stretch")
+        val cardId = builder.card(colId)
+        return builder.finalize(rootId = cardId)
+    }
+
+    /**
+     * Tiny builder for v0.8 standard-catalog component graphs. Each helper
+     * appends a component definition to the in-flight surface and returns
+     * the new component's id, so higher-level helpers can wire them up by
+     * id. ``finalize`` produces the surfaceUpdate + beginRendering pair.
+     */
+    private class StandardSurface {
+        private val surfaceId = "s-${UUID.randomUUID().toString().take(10)}"
+        private val components = mutableListOf<JsonObject>()
+        private var counter = 0
+
+        private fun newId() = "c-${UUID.randomUUID().toString().take(8)}-${counter++}"
+
+        private fun bound(value: String): JsonElement =
+            JsonObject(mapOf("literalString" to JsonPrimitive(value)))
+
+        fun text(value: String, usageHint: String? = null): String {
+            val id = newId()
+            val props = LinkedHashMap<String, JsonElement>()
+            props["text"] = bound(value)
+            if (usageHint != null) props["usageHint"] = JsonPrimitive(usageHint)
+            components.add(JsonObject(mapOf(
+                "id" to JsonPrimitive(id),
+                "component" to JsonObject(mapOf("Text" to JsonObject(props))),
+            )))
+            return id
+        }
+
+        fun row(childIds: List<String>, distribution: String? = null): String {
+            val id = newId()
+            val rowProps = LinkedHashMap<String, JsonElement>()
+            rowProps["children"] = JsonObject(mapOf(
+                "explicitList" to JsonArray(childIds.map { JsonPrimitive(it) })
             ))
-        ))
-        return listOf(surfaceUpdate, beginRendering)
+            if (distribution != null) rowProps["distribution"] = JsonPrimitive(distribution)
+            components.add(JsonObject(mapOf(
+                "id" to JsonPrimitive(id),
+                "component" to JsonObject(mapOf("Row" to JsonObject(rowProps))),
+            )))
+            return id
+        }
+
+        fun column(childIds: List<String>, alignment: String? = null): String {
+            val id = newId()
+            val colProps = LinkedHashMap<String, JsonElement>()
+            colProps["children"] = JsonObject(mapOf(
+                "explicitList" to JsonArray(childIds.map { JsonPrimitive(it) })
+            ))
+            if (alignment != null) colProps["alignment"] = JsonPrimitive(alignment)
+            components.add(JsonObject(mapOf(
+                "id" to JsonPrimitive(id),
+                "component" to JsonObject(mapOf("Column" to JsonObject(colProps))),
+            )))
+            return id
+        }
+
+        fun card(childId: String): String {
+            val id = newId()
+            components.add(JsonObject(mapOf(
+                "id" to JsonPrimitive(id),
+                "component" to JsonObject(mapOf("Card" to JsonObject(mapOf(
+                    "child" to JsonPrimitive(childId)
+                )))),
+            )))
+            return id
+        }
+
+        fun button(
+            label: String,
+            actionName: String,
+            context: Map<String, String> = emptyMap(),
+            primary: Boolean = false,
+        ): String {
+            val labelId = text(label)
+            val id = newId()
+            val actionProps = LinkedHashMap<String, JsonElement>()
+            actionProps["name"] = JsonPrimitive(actionName)
+            if (context.isNotEmpty()) {
+                actionProps["context"] = JsonArray(context.map { (k, v) ->
+                    JsonObject(mapOf("key" to JsonPrimitive(k), "value" to bound(v)))
+                })
+            }
+            val btnProps = LinkedHashMap<String, JsonElement>()
+            btnProps["child"] = JsonPrimitive(labelId)
+            btnProps["action"] = JsonObject(actionProps)
+            if (primary) btnProps["primary"] = JsonPrimitive(true)
+            components.add(JsonObject(mapOf(
+                "id" to JsonPrimitive(id),
+                "component" to JsonObject(mapOf("Button" to JsonObject(btnProps))),
+            )))
+            return id
+        }
+
+        fun finalize(rootId: String): List<JsonObject> {
+            val surfaceUpdate = JsonObject(mapOf(
+                "surfaceUpdate" to JsonObject(mapOf(
+                    "surfaceId" to JsonPrimitive(surfaceId),
+                    "components" to JsonArray(components),
+                ))
+            ))
+            val beginRendering = JsonObject(mapOf(
+                "beginRendering" to JsonObject(mapOf(
+                    "surfaceId" to JsonPrimitive(surfaceId),
+                    "root" to JsonPrimitive(rootId),
+                    "catalogId" to JsonPrimitive(
+                        "https://a2ui.org/specification/v0_8/standard_catalog_definition.json"
+                    ),
+                ))
+            ))
+            return listOf(surfaceUpdate, beginRendering)
+        }
     }
 }

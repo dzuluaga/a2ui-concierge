@@ -3,13 +3,20 @@ from concierge.tools import run_tool
 
 def _root_props(messages: list[dict], expected_type: str) -> dict:
     """Extract the root component's resolved props from a (surfaceUpdate,
-    beginRendering) bundle, asserting the expected component type."""
+    beginRendering) bundle, asserting the expected component type. Use for
+    custom-catalog builders that produce a single composite root."""
     su = next(m["surfaceUpdate"] for m in messages if "surfaceUpdate" in m)
     begin = next(m["beginRendering"] for m in messages if "beginRendering" in m)
     root = next(c for c in su["components"] if c["id"] == begin["root"])
     [(component_type, props)] = root["component"].items()
     assert component_type == expected_type
     return props
+
+
+def _components_of_type(messages: list[dict], type_name: str) -> list[dict]:
+    """All standard-catalog components of [type_name] across the surface."""
+    su = next(m["surfaceUpdate"] for m in messages if "surfaceUpdate" in m)
+    return [c["component"][type_name] for c in su["components"] if type_name in c["component"]]
 
 
 def test_search_catalog_returns_results_list():
@@ -46,15 +53,19 @@ def test_present_chips_returns_a2ui_payload():
         "options": [{"value": "jewelry", "label": "Jewelry"}],
     })
     assert "_a2ui" in out
-    props = _root_props(out["_a2ui"], "ChipGroup")
-    assert props["question"] == {"literalString": "What vibe?"}
+    texts = [t["text"] for t in _components_of_type(out["_a2ui"], "Text")]
+    assert {"literalString": "What vibe?"} in texts
+    buttons = _components_of_type(out["_a2ui"], "Button")
+    assert any(b["action"]["name"] == "chip-group" for b in buttons)
 
 
 def test_present_form_default_includes_three_fields():
     out = run_tool("present_form", {})
-    props = _root_props(out["_a2ui"], "ConciergeForm")
-    names = [f["name"] for f in props["fields"]]
-    assert names == ["gift_wrap", "note", "ship_to"]
+    # gift_wrap → CheckBox path /gift_wrap; note + ship_to → TextField paths.
+    checkbox = _components_of_type(out["_a2ui"], "CheckBox")[0]
+    assert checkbox["value"] == {"path": "/gift_wrap"}
+    tf_paths = {tf["text"]["path"] for tf in _components_of_type(out["_a2ui"], "TextField")}
+    assert tf_paths == {"/note", "/ship_to"}
 
 
 def test_x402_settle_returns_tx_hash():

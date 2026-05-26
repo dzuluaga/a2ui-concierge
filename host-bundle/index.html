@@ -85,29 +85,22 @@
     </div>
   </div>
   <script type="module">
-    // Lit components register themselves on import; the per-bubble
-    // interpreter below mirrors the WebView shim (host-bundle/src/shim.js)
-    // but renders into a chat row instead of a single #a2ui-root.
-    import "./src/components/chip-group.js";
+    // Composite Lit components for the custom catalog (CardGrid,
+    // ProductDetail, PaymentChallenge). Simpler bubbles — chips, forms,
+    // confirmations, tx-detail — now come from the standard catalog and
+    // are rendered by instantiateStandard below.
     import "./src/components/card-grid.js";
     import "./src/components/product-detail.js";
-    import "./src/components/concierge-form.js";
-    import "./src/components/confirmation-card.js";
     import "./src/components/payment-challenge.js";
-    import "./src/components/tx-detail.js";
 
     const CATALOG_ID = "lumen.com:concierge/v1";
     const STANDARD_CATALOG_ID =
       "https://a2ui.org/specification/v0_8/standard_catalog_definition.json";
 
     const COMPONENT_TAG = {
-      ChipGroup: "a2ui-chip-group",
       CardGrid: "a2ui-card-grid",
       ProductDetail: "a2ui-product-detail",
-      ConciergeForm: "a2ui-form",
-      ConfirmationCard: "a2ui-confirmation-card",
       PaymentChallenge: "a2ui-payment-challenge",
-      TxDetail: "a2ui-tx-detail",
     };
 
     // ── v0.8 interpreter (web) ────────────────────────────────────────
@@ -160,10 +153,12 @@
 
     function onBeginRendering({ surfaceId, root, catalogId }) {
       const s = ensureSurface(surfaceId);
-      if (catalogId && catalogId !== CATALOG_ID && catalogId !== STANDARD_CATALOG_ID) {
-        console.warn("[a2ui] unsupported catalogId:", catalogId);
+      const cat = catalogId || CATALOG_ID;
+      if (cat !== CATALOG_ID && cat !== STANDARD_CATALOG_ID) {
+        console.warn("[a2ui] unsupported catalogId:", cat);
         return;
       }
+      s.catalogId = cat;
       const def = s.components.get(root);
       if (!def) return;
       const el = instantiate(def, s);
@@ -181,6 +176,9 @@
       const entry = Object.entries(def.component || {})[0];
       if (!entry) return null;
       const [type, rawProps] = entry;
+      if (surface.catalogId === STANDARD_CATALOG_ID) {
+        return instantiateStandard(type, rawProps, def.id, surface);
+      }
       const tag = COMPONENT_TAG[type];
       if (!tag) return null;
       const el = document.createElement(tag);
@@ -191,6 +189,232 @@
         for (const [k, v] of Object.entries(resolved)) el[k] = v;
       }
       return el;
+    }
+
+    // ── standard catalog rendering (mirrors host-bundle/src/shim.js) ──
+    const TEXT_TAG = { h1: "h1", h2: "h2", h3: "h3", h4: "h4", h5: "h5", caption: "small", body: "span" };
+    const bvIsPath = (bv) => bv && typeof bv === "object" && typeof bv.path === "string";
+    const mapDistribution = (d) => ({ start: "flex-start", center: "center", end: "flex-end", spaceAround: "space-around", spaceBetween: "space-between", spaceEvenly: "space-evenly" })[d] || "flex-start";
+    const mapAlignment = (a, fallback) => ({ start: "flex-start", center: "center", end: "flex-end", stretch: "stretch" })[a] || fallback || "flex-start";
+    function initIfAbsent(surface, bv, value) {
+      if (!bvIsPath(bv)) return;
+      if (getByPath(surface.dataModel, bv.path) === undefined) setByPath(surface.dataModel, bv.path, value);
+    }
+    function appendChildren(parent, childrenSpec, surface) {
+      if (!childrenSpec) return;
+      if (Array.isArray(childrenSpec.explicitList)) {
+        for (const id of childrenSpec.explicitList) {
+          const def = surface.components.get(id);
+          if (!def) continue;
+          const el = instantiate(def, surface);
+          if (el) parent.appendChild(el);
+        }
+      }
+    }
+    function instantiateStandard(type, rawProps, componentId, surface) {
+      ensureStdStyles();
+      rawProps = rawProps || {};
+      let el = null;
+      switch (type) {
+        case "Text": {
+          const text = resolveValue(rawProps.text, surface);
+          const hint = rawProps.usageHint || "body";
+          el = document.createElement(TEXT_TAG[hint] || "span");
+          el.className = `a2ui-std-text a2ui-std-text-${hint}`;
+          el.textContent = text == null ? "" : String(text);
+          break;
+        }
+        case "Image": {
+          el = document.createElement("img");
+          el.className = "a2ui-std-image";
+          el.src = resolveValue(rawProps.url, surface) || "";
+          const alt = resolveValue(rawProps.altText, surface);
+          if (alt) el.alt = alt;
+          if (rawProps.fit) el.style.objectFit = rawProps.fit;
+          if (rawProps.usageHint) el.classList.add(`a2ui-std-image-${rawProps.usageHint}`);
+          break;
+        }
+        case "Row": case "Column": case "List": {
+          el = document.createElement("div");
+          el.className = type === "Row" ? "a2ui-std-row"
+            : type === "Column" ? "a2ui-std-col"
+            : (rawProps.direction === "horizontal" ? "a2ui-std-row" : "a2ui-std-col");
+          el.style.justifyContent = mapDistribution(rawProps.distribution);
+          el.style.alignItems = mapAlignment(rawProps.alignment, type === "Row" ? "center" : "stretch");
+          appendChildren(el, rawProps.children, surface);
+          break;
+        }
+        case "Card": {
+          el = document.createElement("div");
+          el.className = "a2ui-std-card";
+          const def = surface.components.get(rawProps.child);
+          if (def) {
+            const childEl = instantiate(def, surface);
+            if (childEl) el.appendChild(childEl);
+          }
+          break;
+        }
+        case "Divider": {
+          el = document.createElement("hr");
+          el.className = `a2ui-std-divider ${rawProps.axis === "vertical" ? "vertical" : "horizontal"}`;
+          break;
+        }
+        case "Button": {
+          el = document.createElement("button");
+          el.type = "button";
+          el.className = "a2ui-std-btn" + (rawProps.primary ? " primary" : "");
+          const def = surface.components.get(rawProps.child);
+          if (def) {
+            const childEl = instantiate(def, surface);
+            if (childEl) el.appendChild(childEl);
+          }
+          const action = rawProps.action;
+          let fired = false;
+          el.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            if (fired || !action || !action.name) return;
+            fired = true;
+            el.disabled = true;
+            const ctx = {};
+            for (const c of action.context || []) {
+              if (!c || typeof c.key !== "string") continue;
+              ctx[c.key] = resolveValue(c.value, surface);
+            }
+            el.dispatchEvent(new CustomEvent("a2ui-action", {
+              bubbles: true, composed: true,
+              detail: { name: action.name, context: ctx },
+            }));
+          });
+          break;
+        }
+        case "CheckBox": {
+          el = document.createElement("label");
+          el.className = "a2ui-std-checkbox";
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          const initial = !!resolveValue(rawProps.value, surface);
+          cb.checked = initial;
+          initIfAbsent(surface, rawProps.value, initial);
+          const span = document.createElement("span");
+          span.className = "a2ui-std-checkbox-label";
+          span.textContent = resolveValue(rawProps.label, surface) || "";
+          el.appendChild(cb); el.appendChild(span);
+          cb.addEventListener("change", () => {
+            if (bvIsPath(rawProps.value)) setByPath(surface.dataModel, rawProps.value.path, cb.checked);
+          });
+          break;
+        }
+        case "TextField": {
+          el = document.createElement("div");
+          el.className = "a2ui-std-textfield";
+          const labelText = resolveValue(rawProps.label, surface);
+          if (labelText) {
+            const lbl = document.createElement("div");
+            lbl.className = "a2ui-std-textfield-label";
+            lbl.textContent = labelText;
+            el.appendChild(lbl);
+          }
+          const tfType = rawProps.textFieldType || "shortText";
+          const input = tfType === "longText"
+            ? document.createElement("textarea")
+            : document.createElement("input");
+          if (input.tagName === "INPUT") {
+            input.type = ({ date: "date", number: "number", obscured: "password" })[tfType] || "text";
+          } else {
+            input.rows = 2;
+          }
+          input.className = "a2ui-std-textfield-input";
+          const initial = resolveValue(rawProps.text, surface);
+          input.value = initial == null ? "" : String(initial);
+          initIfAbsent(surface, rawProps.text, input.value);
+          input.placeholder = labelText || "";
+          input.addEventListener("input", () => {
+            if (bvIsPath(rawProps.text)) setByPath(surface.dataModel, rawProps.text.path, input.value);
+          });
+          el.appendChild(input);
+          break;
+        }
+        case "MultipleChoice": {
+          el = document.createElement("div");
+          const variant = rawProps.variant || "checkbox";
+          el.className = `a2ui-std-mc a2ui-std-mc-${variant}`;
+          const maxN = rawProps.maxAllowedSelections;
+          const initial = resolveValue(rawProps.selections, surface);
+          let selections = Array.isArray(initial) ? [...initial] : [];
+          initIfAbsent(surface, rawProps.selections, selections);
+          const repaint = () => {
+            for (const child of el.children) child.setAttribute("aria-pressed", selections.includes(child.dataset.value) ? "true" : "false");
+          };
+          for (const opt of rawProps.options || []) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "a2ui-std-mc-option";
+            btn.dataset.value = opt.value;
+            btn.textContent = resolveValue(opt.label, surface) || opt.value;
+            btn.setAttribute("aria-pressed", selections.includes(opt.value) ? "true" : "false");
+            btn.addEventListener("click", () => {
+              const v = opt.value;
+              if (selections.includes(v)) selections = selections.filter(x => x !== v);
+              else if (maxN === 1) selections = [v];
+              else if (typeof maxN === "number" && selections.length >= maxN) return;
+              else selections.push(v);
+              if (bvIsPath(rawProps.selections)) setByPath(surface.dataModel, rawProps.selections.path, selections);
+              repaint();
+            });
+            el.appendChild(btn);
+          }
+          break;
+        }
+        default:
+          console.warn("[a2ui] unknown standard type:", type);
+          return null;
+      }
+      el._a2uiType = type;
+      el._a2uiSurfaceId = surface.surfaceId;
+      el._a2uiSourceComponentId = componentId;
+      return el;
+    }
+
+    let _stdStylesInjected = false;
+    function ensureStdStyles() {
+      if (_stdStylesInjected) return;
+      _stdStylesInjected = true;
+      const tag = document.createElement("style");
+      tag.textContent = `
+        .a2ui-std-root:not(.a2ui-std-card) { padding: 14px 16px; background: #fff; border: 1px solid var(--asst-border); border-radius: var(--a2ui-radius-md); box-shadow: 0 1px 2px rgba(20, 18, 14, 0.04), 0 6px 16px -10px rgba(20, 18, 14, 0.08); font-family: var(--a2ui-font-sans); }
+        .a2ui-std-root.a2ui-std-col { gap: 12px; }
+        .a2ui-std-text { font-family: var(--a2ui-font-sans); color: var(--text); line-height: 1.45; }
+        .a2ui-std-text-h1 { font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+        .a2ui-std-text-h2 { font-size: 18px; font-weight: 700; margin: 0 0 6px; }
+        .a2ui-std-text-h3 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+        .a2ui-std-text-h4 { font-size: 14px; font-weight: 600; margin: 0 0 6px; }
+        .a2ui-std-text-h5 { font-size: 13px; font-weight: 600; margin: 0 0 4px; letter-spacing: .2px; }
+        .a2ui-std-text-caption { font-size: 12px; color: var(--muted); }
+        .a2ui-std-text-body { font-size: 14px; }
+        .a2ui-std-row { display: flex; flex-direction: row; gap: 8px; flex-wrap: wrap; }
+        .a2ui-std-col { display: flex; flex-direction: column; gap: 8px; }
+        .a2ui-std-card { margin: 0; padding: 14px 16px; border: 1px solid var(--asst-border); border-radius: var(--a2ui-radius-md); background: #fff; box-shadow: 0 1px 2px rgba(20, 18, 14, 0.04), 0 6px 16px -10px rgba(20, 18, 14, 0.08); font-family: var(--a2ui-font-sans); }
+        .a2ui-std-divider.horizontal { border: 0; border-top: 1px solid var(--asst-border); margin: 6px 0; }
+        .a2ui-std-divider.vertical { border: 0; border-left: 1px solid var(--asst-border); align-self: stretch; }
+        .a2ui-std-image { max-width: 100%; border-radius: 10px; }
+        .a2ui-std-btn { font: inherit; font-size: 14px; font-weight: 600; padding: 9px 16px; border-radius: 999px; border: 1px solid var(--asst-border); background: #faf7f1; color: var(--text); cursor: pointer; transition: background .15s, border-color .15s, transform .08s; }
+        .a2ui-std-btn:active { transform: scale(0.97); }
+        .a2ui-std-btn.primary { background: var(--a2ui-color-accent); color: #fff; border-color: var(--a2ui-color-accent); box-shadow: 0 4px 12px -4px rgba(91, 108, 255, 0.45); }
+        .a2ui-std-checkbox { display: flex; align-items: center; gap: 10px; padding: 4px 0; font-family: var(--a2ui-font-sans); font-size: 14px; color: var(--text); }
+        .a2ui-std-checkbox input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--a2ui-color-accent); }
+        .a2ui-std-textfield { display: flex; flex-direction: column; gap: 6px; font-family: var(--a2ui-font-sans); }
+        .a2ui-std-textfield-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; font-weight: 600; }
+        .a2ui-std-textfield-input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--asst-border); border-radius: 10px; font: inherit; font-size: 14px; color: var(--text); background: #faf7f1; }
+        .a2ui-std-textfield-input:focus { outline: none; border-color: var(--a2ui-color-accent); background: #fff; }
+        .a2ui-std-mc { display: flex; flex-wrap: wrap; gap: 6px; }
+        .a2ui-std-mc-chips .a2ui-std-mc-option { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--asst-border); background: #faf7f1; color: var(--text); cursor: pointer; transition: background .15s, border-color .15s, transform .08s; }
+        .a2ui-std-mc-chips .a2ui-std-mc-option:active { transform: scale(0.97); }
+        .a2ui-std-mc-chips .a2ui-std-mc-option[aria-pressed="true"] { background: var(--a2ui-color-accent); color: #fff; border-color: var(--a2ui-color-accent); }
+        .a2ui-std-mc-checkbox { flex-direction: column; align-items: stretch; }
+        .a2ui-std-mc-checkbox .a2ui-std-mc-option { font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--asst-border); background: #faf7f1; color: var(--text); cursor: pointer; text-align: left; }
+        .a2ui-std-mc-checkbox .a2ui-std-mc-option[aria-pressed="true"] { background: #fff; border-color: var(--a2ui-color-accent); box-shadow: 0 0 0 1px var(--a2ui-color-accent) inset; }
+      `;
+      document.head.appendChild(tag);
     }
 
     const BOUND_KEYS = new Set(["literalString", "literalNumber", "literalBoolean", "literalArray", "path"]);
@@ -239,6 +463,10 @@
       row.dataset.surface = surfaceId;
       const slot = document.createElement("div");
       slot.className = "a2ui-slot";
+      // Top-level standard-catalog surfaces that aren't already a Card get
+      // outer card chrome so they don't render as bare flex containers.
+      const surface = surfaces.get(surfaceId);
+      if (surface && surface.catalogId === STANDARD_CATALOG_ID) el.classList.add("a2ui-std-root");
       slot.appendChild(el);
       row.appendChild(slot);
       appendStreamRow(row);

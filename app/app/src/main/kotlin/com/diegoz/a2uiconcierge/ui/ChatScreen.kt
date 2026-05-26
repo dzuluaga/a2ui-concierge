@@ -61,7 +61,7 @@ fun ChatScreen(vm: ChatViewModel) {
     val haptic = LocalHapticFeedback.current
     LaunchedEffect(messages.size) {
         val last = messages.lastOrNull()
-        if (last is Message.AgentA2ui && rootComponentType(last.fragments) == "ConfirmationCard") {
+        if (last is Message.AgentA2ui && isConfirmationSurface(last.fragments)) {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         }
     }
@@ -236,25 +236,26 @@ private fun ChatList(
 }
 
 /**
- * Inspect the message stream for the root component type. v0.8 specifies
- * the root by id via ``beginRendering.root`` — looking at the first entry of
- * ``surfaceUpdate.components`` would mis-classify any surface whose root
- * isn't authored as the first component definition.
+ * Confirmation surfaces are now built from the standard catalog (Card →
+ * Column → ...), so we can't distinguish them by root component type
+ * alone. Instead we look for the marker ``tx-detail-open`` Button action
+ * that only confirmation surfaces emit.
  */
-private fun rootComponentType(fragments: List<JsonObject>): String? {
-    val rootId = fragments.firstNotNullOfOrNull { f ->
-        (f["beginRendering"] as? JsonObject)
-            ?.get("root")?.jsonPrimitive?.contentOrNull
-    } ?: return null
+private fun isConfirmationSurface(fragments: List<JsonObject>): Boolean =
+    hasButtonAction(fragments, "tx-detail-open")
+
+private fun hasButtonAction(fragments: List<JsonObject>, actionName: String): Boolean {
     for (f in fragments) {
         val update = f["surfaceUpdate"] as? JsonObject ?: continue
         val components = update["components"] as? JsonArray ?: continue
         for (item in components) {
             val obj = item as? JsonObject ?: continue
-            if (obj["id"]?.jsonPrimitive?.contentOrNull != rootId) continue
             val componentObj = obj["component"] as? JsonObject ?: continue
-            return componentObj.keys.firstOrNull()
+            val buttonProps = componentObj["Button"] as? JsonObject ?: continue
+            val action = buttonProps["action"] as? JsonObject ?: continue
+            val name = action["name"]?.jsonPrimitive?.contentOrNull
+            if (name == actionName) return true
         }
     }
-    return null
+    return false
 }
