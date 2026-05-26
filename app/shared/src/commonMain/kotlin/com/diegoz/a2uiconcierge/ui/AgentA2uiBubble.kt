@@ -70,7 +70,9 @@ fun AgentA2uiBubble(
     )
 
     val rootType = primaryComponentType(fragments)
-    val isConfirmation = rootType == "ConfirmationCard"
+    // Standard-catalog confirmation surfaces root at "Card"; we detect them
+    // by the marker tx-detail-open Button action they always include.
+    val isConfirmation = hasButtonAction(fragments, "tx-detail-open")
     val isProductDetail = rootType == "ProductDetail"
 
     val popScale = remember {
@@ -206,4 +208,21 @@ private fun primaryComponentType(fragments: List<JsonObject>): String? {
         }
     }
     return null
+}
+
+/** True if any Button in the buffered surface declares ``action.name`` == [actionName]. */
+private fun hasButtonAction(fragments: List<JsonObject>, actionName: String): Boolean {
+    for (frame in fragments) {
+        val update = frame["surfaceUpdate"] as? JsonObject ?: continue
+        val components = update["components"] as? JsonArray ?: continue
+        for (item in components) {
+            val obj = item as? JsonObject ?: continue
+            val componentObj = obj["component"] as? JsonObject ?: continue
+            val buttonProps = componentObj["Button"] as? JsonObject ?: continue
+            val action = buttonProps["action"] as? JsonObject ?: continue
+            val name = action["name"]?.jsonPrimitive?.contentOrNull
+            if (name == actionName) return true
+        }
+    }
+    return false
 }
