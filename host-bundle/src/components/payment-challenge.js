@@ -1,17 +1,3 @@
-// ──────────────────────────────────────────────────────────────────────────
-// REBASE TODO — verify before merge (Claude, on behalf of @dzuluaga, 2026-05-26)
-// This file was auto-merged during the rebase of PR #4 (A2UI v0.8 migration)
-// onto a main that already contained PR #1's DPC + loyalty + age verification UI.
-// The auto-merger preserved BOTH sets of changes line-by-line. Please verify:
-//   1. The v0.8 invocation path (shim.js → custom catalog dispatch) reaches
-//      this component's render() correctly.
-//   2. The DPC selector, loyalty discount, and age-verification sections from
-//      PR #1 still appear and still emit the right userAction events back
-//      through window.AndroidBridge.
-//   3. render() doesn't reference props the v0.8 invocation no longer supplies.
-// Quick check: full demo, champagne (age) → loyalty → card payment. If any
-// of those flows break, this is the file.
-// ──────────────────────────────────────────────────────────────────────────
 import { LitElement, html, css } from "lit";
 
 /**
