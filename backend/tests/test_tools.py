@@ -19,17 +19,17 @@ def _components_of_type(messages: list[dict], type_name: str) -> list[dict]:
     return [c["component"][type_name] for c in su["components"] if type_name in c["component"]]
 
 
-def test_search_catalog_returns_results_list():
-    out = run_tool("search_catalog", {"category": "jewelry", "price_max": 150})
+async def test_search_catalog_returns_results_list():
+    out = await run_tool("search_catalog", {"category": "jewelry", "price_max": 150})
     assert "results" in out
     assert len(out["results"]) > 0
 
-def test_get_product_returns_id():
-    out = run_tool("get_product", {"product_id": "lum-jewel-001"})
+async def test_get_product_returns_id():
+    out = await run_tool("get_product", {"product_id": "lum-jewel-001"})
     assert out["id"] == "lum-jewel-001"
 
-def test_place_order_returns_payment_challenge():
-    out = run_tool("place_order", {
+async def test_place_order_returns_payment_challenge():
+    out = await run_tool("place_order", {
         "product_id": "lum-jewel-001",
         "variant_options": {"finish": "silver", "length": "16\""},
         "gift_wrap": True,
@@ -47,8 +47,8 @@ def test_place_order_returns_payment_challenge():
     assert "Gift wrap" in labels
 
 
-def test_present_chips_returns_a2ui_payload():
-    out = run_tool("present_chips", {
+async def test_present_chips_returns_a2ui_payload():
+    out = await run_tool("present_chips", {
         "question": "What vibe?",
         "options": [{"value": "jewelry", "label": "Jewelry"}],
     })
@@ -59,8 +59,8 @@ def test_present_chips_returns_a2ui_payload():
     assert any(b["action"]["name"] == "chip-group" for b in buttons)
 
 
-def test_present_form_default_includes_three_fields():
-    out = run_tool("present_form", {})
+async def test_present_form_default_includes_three_fields():
+    out = await run_tool("present_form", {})
     # gift_wrap → CheckBox path /gift_wrap; note + ship_to → TextField paths.
     checkbox = _components_of_type(out["_a2ui"], "CheckBox")[0]
     assert checkbox["value"] == {"path": "/gift_wrap"}
@@ -68,13 +68,13 @@ def test_present_form_default_includes_three_fields():
     assert tf_paths == {"/note", "/ship_to"}
 
 
-def test_x402_settle_returns_tx_hash():
+async def test_x402_settle_returns_tx_hash():
     """Mock settle path: place an order, then settle returns a tx hash and
     flips the order record to settled. Idempotent on repeat call."""
     import asyncio
     from concierge import payments
 
-    out = run_tool("place_order", {
+    out = await run_tool("place_order", {
         "product_id": "lum-jewel-001",
         "variant_options": {"finish": "silver"},
         "gift_wrap": False,

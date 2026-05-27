@@ -159,10 +159,11 @@ fun AgentA2uiBubble(
 /**
  * Sheet variant — fills available space and lets the web content scroll natively.
  * Used inside ModalBottomSheet for product-detail, payment-challenge, tx-detail.
+ * Accepts a full v0.8 fragment list (surfaceUpdate + beginRendering + ...).
  */
 @Composable
 fun A2uiSheetContent(
-    fragment: JsonObject,
+    fragments: List<JsonObject>,
     onAction: (String) -> Unit,
     backendBaseUrl: String,
     modifier: Modifier = Modifier,
@@ -179,7 +180,7 @@ fun A2uiSheetContent(
     Box(modifier = modifier.fillMaxSize()) {
         A2uiWebContent(
             bridge = bridge,
-            fragments = listOf(fragment),
+            fragments = fragments,
             isSheet = true,
             modifier = Modifier.fillMaxSize(),
         )
