@@ -1,14 +1,10 @@
 # A2UI Concierge
 
-A demo of the **A2UI** protocol running side-by-side on **Android** (Kotlin / Jetpack Compose
-chrome + WebView-hosted Lit components) and **the web** (the same Lit components, no
-hybrid). A streaming Python backend (Anthropic Claude Sonnet 4.6 + tool use) drives both
-clients with the exact same A2UI fragments — so every UI you see was authored once and
-rendered identically on both platforms.
+A demo that **implements [Google's A2UI v0.8](https://github.com/google/A2UI)** — the v0.8 wire format (`surfaceUpdate` / `beginRendering` / `dataModelUpdate` / `deleteSurface`), the official [standard catalog](https://a2ui.org/specification/v0_8/standard_catalog_definition.json) (`Text`, `Button`, `Row`, `Column`, `Card`, `CheckBox`, `TextField`, `MultipleChoice`, `Divider`), and a namespaced custom catalog (`lumen.com:concierge/v1`) for three e-commerce composites (`CardGrid`, `ProductDetail`, `PaymentChallenge`).
 
-The use case is a "Lumen Concierge" gift-shopping flow: the agent picks products, asks
-clarifying questions, places an order, and confirms — all via streamed A2UI components, not
-text.
+Runs side-by-side on **Android** (Kotlin / Jetpack Compose chrome + WebView-hosted Lit interpreter), **iOS** (Compose Multiplatform + WKWebView), and **the web** (the same Lit interpreter, no hybrid). A streaming Python backend (LiteLLM, defaults to Claude) drives all clients with the exact same v0.8 messages — every UI you see was authored once and rendered identically on every platform.
+
+The use case is a "Lumen Concierge" gift-shopping flow: the agent picks products, asks clarifying questions, places an order, and confirms — all via streamed v0.8 surfaces, not text.
 
 > High-fidelity prototype, not a production app.
 
@@ -96,10 +92,8 @@ Under the hood:
 
 ## What this shows
 
-- **One agent, two surfaces.** Same `/chat` SSE stream feeds an Android app and a web app.
-- **Five A2UI components**, all written once in Lit, used by both clients:
-  `chip-group`, `card-grid` (horizontal swipe rail), `product-detail`, `form` (toggles +
-  saved-address pills), `confirmation-card`.
+- **One agent, three surfaces.** Same `/chat` SSE stream feeds Android, iOS, and a web app.
+- **Two catalogs, one interpreter.** Simple chrome (chips, forms, confirmations, tx details) is built from the **v0.8 standard catalog** (`Text` / `Row` / `Column` / `Card` / `Button` / `CheckBox` / `TextField` / `MultipleChoice` / `Divider`) and rendered by the shim with no per-surface Lit components. App-specific composites (`CardGrid` horizontal swipe rail, `ProductDetail`, `PaymentChallenge`) live on a namespaced custom catalog (`lumen.com:concierge/v1`) and are backed by three Lit components. See [`docs/a2ui-shapes.md`](docs/a2ui-shapes.md) for per-surface shape references.
 - **Hybrid Compose chrome on Android.** The chat shell, top bar, input row, thinking dots,
   and bubble entry/exit motion are pure Compose; only the A2UI bubble itself is a WebView.
   Bubbles spring into view, the `product-detail` arrival is emphasized, and the previous
