@@ -20,7 +20,7 @@ actual fun A2uiWebContent(
     isSheet: Boolean,
     modifier: Modifier,
 ) {
-    val payload = fragments.lastOrNull()?.toString().orEmpty()
+    val payload = fragmentsAsJsArray(fragments)
 
     AndroidView(
         modifier = modifier,
@@ -64,10 +64,9 @@ actual fun A2uiWebContent(
                             "window.a2ui.applyTheme(${ThemeTokens.asJson()});",
                             null,
                         )
-                        val initial = fragments.lastOrNull()?.toString().orEmpty()
-                        if (initial.isNotEmpty()) {
-                            view.evaluateJavascript("window.a2ui.render($initial);", null)
-                            view.tag = initial
+                        if (payload.isNotEmpty()) {
+                            view.evaluateJavascript("window.a2ui.ingest($payload);", null)
+                            view.tag = payload
                         } else {
                             view.tag = ""
                         }
@@ -80,8 +79,17 @@ actual fun A2uiWebContent(
             val lastRendered = wv.tag as? String ?: return@AndroidView
             if (lastRendered != payload && payload.isNotEmpty()) {
                 wv.tag = payload
-                wv.evaluateJavascript("window.a2ui.render($payload);", null)
+                wv.evaluateJavascript("window.a2ui.reset(); window.a2ui.ingest($payload);", null)
             }
         },
     )
+}
+
+/**
+ * Serialise the per-bubble fragment list as a JS-array literal suitable for
+ * ``window.a2ui.ingest(...)``. Empty list → "" so callers can guard.
+ */
+private fun fragmentsAsJsArray(fragments: List<JsonObject>): String {
+    if (fragments.isEmpty()) return ""
+    return fragments.joinToString(prefix = "[", postfix = "]", separator = ",") { it.toString() }
 }

@@ -75,7 +75,7 @@
       <div class="header">
         <div class="title">Lumen Concierge</div>
         <div class="sub">Personal shopping, thoughtfully picked</div>
-        <div class="badge">Web · same A2UI components</div>
+        <div class="badge">Web · A2UI v0.8</div>
       </div>
       <div id="messages" class="messages"></div>
       <form id="form" class="input">
@@ -85,23 +85,432 @@
     </div>
   </div>
   <script type="module">
-    import "./src/components/chip-group.js";
+    // Composite Lit components for the custom catalog (CardGrid,
+    // ProductDetail, PaymentChallenge). Simpler bubbles — chips, forms,
+    // confirmations, tx-detail — now come from the standard catalog and
+    // are rendered by instantiateStandard below.
     import "./src/components/card-grid.js";
     import "./src/components/product-detail.js";
-    import "./src/components/concierge-form.js";
-    import "./src/components/confirmation-card.js";
     import "./src/components/payment-challenge.js";
-    import "./src/components/tx-detail.js";
+
+    const CATALOG_ID = "lumen.com:concierge/v1";
+    const STANDARD_CATALOG_ID =
+      "https://a2ui.org/specification/v0_8/standard_catalog_definition.json";
 
     const COMPONENT_TAG = {
-      "chip-group": "a2ui-chip-group",
-      "card-grid": "a2ui-card-grid",
-      "product-detail": "a2ui-product-detail",
-      "form": "a2ui-form",
-      "confirmation-card": "a2ui-confirmation-card",
-      "payment-challenge": "a2ui-payment-challenge",
-      "tx-detail": "a2ui-tx-detail",
+      CardGrid: "a2ui-card-grid",
+      ProductDetail: "a2ui-product-detail",
+      PaymentChallenge: "a2ui-payment-challenge",
     };
+
+    // ── v0.8 interpreter (web) ────────────────────────────────────────
+    // Per-surface buffers shared across the chat — surfaceUpdate frames
+    // can arrive incrementally; beginRendering for a known surface mounts
+    // the root component into a fresh chat bubble.
+    const surfaces = new Map();
+
+    function ensureSurface(id) {
+      let s = surfaces.get(id);
+      if (!s) { s = { surfaceId: id, components: new Map(), dataModel: {} }; surfaces.set(id, s); }
+      return s;
+    }
+
+    function ingest(msg) {
+      if (msg == null) return;
+      if (typeof msg === "string") { try { msg = JSON.parse(msg); } catch { return; } }
+      if (Array.isArray(msg)) { msg.forEach(ingest); return; }
+      if (msg.surfaceUpdate) onSurfaceUpdate(msg.surfaceUpdate);
+      else if (msg.dataModelUpdate) onDataModelUpdate(msg.dataModelUpdate);
+      else if (msg.beginRendering) onBeginRendering(msg.beginRendering);
+      else if (msg.deleteSurface) onDeleteSurface(msg.deleteSurface);
+    }
+
+    function onSurfaceUpdate({ surfaceId, components }) {
+      const s = ensureSurface(surfaceId);
+      for (const c of components || []) if (c?.id) s.components.set(c.id, c);
+    }
+
+    function onDataModelUpdate({ surfaceId, path, contents }) {
+      const s = ensureSurface(surfaceId);
+      const entries = {};
+      for (const e of contents || []) {
+        if (!e || typeof e.key !== "string") continue;
+        if ("valueString" in e) entries[e.key] = e.valueString;
+        else if ("valueNumber" in e) entries[e.key] = e.valueNumber;
+        else if ("valueBoolean" in e) entries[e.key] = e.valueBoolean;
+        else if ("valueMap" in e) {
+          entries[e.key] = {};
+          for (const en of e.valueMap || []) {
+            if ("valueString" in en) entries[e.key][en.key] = en.valueString;
+            else if ("valueNumber" in en) entries[e.key][en.key] = en.valueNumber;
+            else if ("valueBoolean" in en) entries[e.key][en.key] = en.valueBoolean;
+          }
+        }
+      }
+      if (!path || path === "/") s.dataModel = entries;
+      else setByPath(s.dataModel, path, entries);
+    }
+
+    function onBeginRendering({ surfaceId, root, catalogId }) {
+      const s = ensureSurface(surfaceId);
+      const cat = catalogId || CATALOG_ID;
+      if (cat !== CATALOG_ID && cat !== STANDARD_CATALOG_ID) {
+        console.warn("[a2ui] unsupported catalogId:", cat);
+        return;
+      }
+      s.catalogId = cat;
+      const def = s.components.get(root);
+      if (!def) return;
+      const el = instantiate(def, s);
+      if (!el) return;
+      mountSurfaceBubble(surfaceId, el);
+    }
+
+    function onDeleteSurface({ surfaceId }) {
+      surfaces.delete(surfaceId);
+      const row = document.querySelector(`[data-surface="${cssEscape(surfaceId)}"]`);
+      if (row) row.remove();
+    }
+
+    function instantiate(def, surface) {
+      const entry = Object.entries(def.component || {})[0];
+      if (!entry) return null;
+      const [type, rawProps] = entry;
+      if (surface.catalogId === STANDARD_CATALOG_ID) {
+        return instantiateStandard(type, rawProps, def.id, surface);
+      }
+      const tag = COMPONENT_TAG[type];
+      if (!tag) return null;
+      const el = document.createElement(tag);
+      el._a2uiSurfaceId = surface.surfaceId;
+      el._a2uiSourceComponentId = def.id;
+      const resolved = resolveValue(rawProps, surface);
+      if (resolved && typeof resolved === "object") {
+        for (const [k, v] of Object.entries(resolved)) el[k] = v;
+      }
+      return el;
+    }
+
+    // ── standard catalog rendering (mirrors host-bundle/src/shim.js) ──
+    const TEXT_TAG = { h1: "h1", h2: "h2", h3: "h3", h4: "h4", h5: "h5", caption: "small", body: "span" };
+    const bvIsPath = (bv) => bv && typeof bv === "object" && typeof bv.path === "string";
+    const mapDistribution = (d) => ({ start: "flex-start", center: "center", end: "flex-end", spaceAround: "space-around", spaceBetween: "space-between", spaceEvenly: "space-evenly" })[d] || "flex-start";
+    const mapAlignment = (a, fallback) => ({ start: "flex-start", center: "center", end: "flex-end", stretch: "stretch" })[a] || fallback || "flex-start";
+    function initIfAbsent(surface, bv, value) {
+      if (!bvIsPath(bv)) return;
+      if (getByPath(surface.dataModel, bv.path) === undefined) setByPath(surface.dataModel, bv.path, value);
+    }
+    function appendChildren(parent, childrenSpec, surface) {
+      if (!childrenSpec) return;
+      if (Array.isArray(childrenSpec.explicitList)) {
+        for (const id of childrenSpec.explicitList) {
+          const def = surface.components.get(id);
+          if (!def) continue;
+          const el = instantiate(def, surface);
+          if (el) parent.appendChild(el);
+        }
+      }
+    }
+    function instantiateStandard(type, rawProps, componentId, surface) {
+      ensureStdStyles();
+      rawProps = rawProps || {};
+      let el = null;
+      switch (type) {
+        case "Text": {
+          const text = resolveValue(rawProps.text, surface);
+          const hint = rawProps.usageHint || "body";
+          el = document.createElement(TEXT_TAG[hint] || "span");
+          el.className = `a2ui-std-text a2ui-std-text-${hint}`;
+          el.textContent = text == null ? "" : String(text);
+          break;
+        }
+        case "Image": {
+          el = document.createElement("img");
+          el.className = "a2ui-std-image";
+          el.src = resolveValue(rawProps.url, surface) || "";
+          const alt = resolveValue(rawProps.altText, surface);
+          if (alt) el.alt = alt;
+          if (rawProps.fit) el.style.objectFit = rawProps.fit;
+          if (rawProps.usageHint) el.classList.add(`a2ui-std-image-${rawProps.usageHint}`);
+          break;
+        }
+        case "Row": case "Column": case "List": {
+          el = document.createElement("div");
+          el.className = type === "Row" ? "a2ui-std-row"
+            : type === "Column" ? "a2ui-std-col"
+            : (rawProps.direction === "horizontal" ? "a2ui-std-row" : "a2ui-std-col");
+          el.style.justifyContent = mapDistribution(rawProps.distribution);
+          el.style.alignItems = mapAlignment(rawProps.alignment, type === "Row" ? "center" : "stretch");
+          appendChildren(el, rawProps.children, surface);
+          break;
+        }
+        case "Card": {
+          el = document.createElement("div");
+          el.className = "a2ui-std-card";
+          const def = surface.components.get(rawProps.child);
+          if (def) {
+            const childEl = instantiate(def, surface);
+            if (childEl) el.appendChild(childEl);
+          }
+          break;
+        }
+        case "Divider": {
+          el = document.createElement("hr");
+          el.className = `a2ui-std-divider ${rawProps.axis === "vertical" ? "vertical" : "horizontal"}`;
+          break;
+        }
+        case "Button": {
+          el = document.createElement("button");
+          el.type = "button";
+          el.className = "a2ui-std-btn" + (rawProps.primary ? " primary" : "");
+          const def = surface.components.get(rawProps.child);
+          if (def) {
+            const childEl = instantiate(def, surface);
+            if (childEl) el.appendChild(childEl);
+          }
+          const action = rawProps.action;
+          let fired = false;
+          el.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            if (fired || !action || !action.name) return;
+            fired = true;
+            el.disabled = true;
+            const ctx = {};
+            for (const c of action.context || []) {
+              if (!c || typeof c.key !== "string") continue;
+              ctx[c.key] = resolveValue(c.value, surface);
+            }
+            el.dispatchEvent(new CustomEvent("a2ui-action", {
+              bubbles: true, composed: true,
+              detail: { name: action.name, context: ctx },
+            }));
+          });
+          break;
+        }
+        case "CheckBox": {
+          el = document.createElement("label");
+          el.className = "a2ui-std-checkbox";
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          const initial = !!resolveValue(rawProps.value, surface);
+          cb.checked = initial;
+          initIfAbsent(surface, rawProps.value, initial);
+          const span = document.createElement("span");
+          span.className = "a2ui-std-checkbox-label";
+          span.textContent = resolveValue(rawProps.label, surface) || "";
+          el.appendChild(cb); el.appendChild(span);
+          cb.addEventListener("change", () => {
+            if (bvIsPath(rawProps.value)) setByPath(surface.dataModel, rawProps.value.path, cb.checked);
+          });
+          break;
+        }
+        case "TextField": {
+          el = document.createElement("div");
+          el.className = "a2ui-std-textfield";
+          const labelText = resolveValue(rawProps.label, surface);
+          if (labelText) {
+            const lbl = document.createElement("div");
+            lbl.className = "a2ui-std-textfield-label";
+            lbl.textContent = labelText;
+            el.appendChild(lbl);
+          }
+          const tfType = rawProps.textFieldType || "shortText";
+          const input = tfType === "longText"
+            ? document.createElement("textarea")
+            : document.createElement("input");
+          if (input.tagName === "INPUT") {
+            input.type = ({ date: "date", number: "number", obscured: "password" })[tfType] || "text";
+          } else {
+            input.rows = 2;
+          }
+          input.className = "a2ui-std-textfield-input";
+          const initial = resolveValue(rawProps.text, surface);
+          input.value = initial == null ? "" : String(initial);
+          initIfAbsent(surface, rawProps.text, input.value);
+          input.placeholder = labelText || "";
+          input.addEventListener("input", () => {
+            if (bvIsPath(rawProps.text)) setByPath(surface.dataModel, rawProps.text.path, input.value);
+          });
+          el.appendChild(input);
+          break;
+        }
+        case "MultipleChoice": {
+          el = document.createElement("div");
+          const variant = rawProps.variant || "checkbox";
+          el.className = `a2ui-std-mc a2ui-std-mc-${variant}`;
+          const maxN = rawProps.maxAllowedSelections;
+          const initial = resolveValue(rawProps.selections, surface);
+          let selections = Array.isArray(initial) ? [...initial] : [];
+          initIfAbsent(surface, rawProps.selections, selections);
+          const repaint = () => {
+            for (const child of el.children) child.setAttribute("aria-pressed", selections.includes(child.dataset.value) ? "true" : "false");
+          };
+          for (const opt of rawProps.options || []) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "a2ui-std-mc-option";
+            btn.dataset.value = opt.value;
+            btn.textContent = resolveValue(opt.label, surface) || opt.value;
+            btn.setAttribute("aria-pressed", selections.includes(opt.value) ? "true" : "false");
+            btn.addEventListener("click", () => {
+              const v = opt.value;
+              if (selections.includes(v)) selections = selections.filter(x => x !== v);
+              else if (maxN === 1) selections = [v];
+              else if (typeof maxN === "number" && selections.length >= maxN) return;
+              else selections.push(v);
+              if (bvIsPath(rawProps.selections)) setByPath(surface.dataModel, rawProps.selections.path, selections);
+              repaint();
+            });
+            el.appendChild(btn);
+          }
+          break;
+        }
+        default:
+          console.warn("[a2ui] unknown standard type:", type);
+          return null;
+      }
+      el._a2uiType = type;
+      el._a2uiSurfaceId = surface.surfaceId;
+      el._a2uiSourceComponentId = componentId;
+      return el;
+    }
+
+    let _stdStylesInjected = false;
+    function ensureStdStyles() {
+      if (_stdStylesInjected) return;
+      _stdStylesInjected = true;
+      const tag = document.createElement("style");
+      tag.textContent = `
+        .a2ui-std-root:not(.a2ui-std-card) { padding: 14px 16px; background: #fff; border: 1px solid var(--asst-border); border-radius: var(--a2ui-radius-md); box-shadow: 0 1px 2px rgba(20, 18, 14, 0.04), 0 6px 16px -10px rgba(20, 18, 14, 0.08); font-family: var(--a2ui-font-sans); }
+        .a2ui-std-root.a2ui-std-col { gap: 12px; }
+        .a2ui-std-text { font-family: var(--a2ui-font-sans); color: var(--text); line-height: 1.45; }
+        .a2ui-std-text-h1 { font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+        .a2ui-std-text-h2 { font-size: 18px; font-weight: 700; margin: 0 0 6px; }
+        .a2ui-std-text-h3 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+        .a2ui-std-text-h4 { font-size: 14px; font-weight: 600; margin: 0 0 6px; }
+        .a2ui-std-text-h5 { font-size: 13px; font-weight: 600; margin: 0 0 4px; letter-spacing: .2px; }
+        .a2ui-std-text-caption { font-size: 12px; color: var(--muted); }
+        .a2ui-std-text-body { font-size: 14px; }
+        .a2ui-std-row { display: flex; flex-direction: row; gap: 8px; flex-wrap: wrap; }
+        .a2ui-std-col { display: flex; flex-direction: column; gap: 8px; }
+        .a2ui-std-card { margin: 0; padding: 14px 16px; border: 1px solid var(--asst-border); border-radius: var(--a2ui-radius-md); background: #fff; box-shadow: 0 1px 2px rgba(20, 18, 14, 0.04), 0 6px 16px -10px rgba(20, 18, 14, 0.08); font-family: var(--a2ui-font-sans); }
+        .a2ui-std-divider.horizontal { border: 0; border-top: 1px solid var(--asst-border); margin: 6px 0; }
+        .a2ui-std-divider.vertical { border: 0; border-left: 1px solid var(--asst-border); align-self: stretch; }
+        .a2ui-std-image { max-width: 100%; border-radius: 10px; }
+        .a2ui-std-btn { font: inherit; font-size: 14px; font-weight: 600; padding: 9px 16px; border-radius: 999px; border: 1px solid var(--asst-border); background: #faf7f1; color: var(--text); cursor: pointer; transition: background .15s, border-color .15s, transform .08s; }
+        .a2ui-std-btn:active { transform: scale(0.97); }
+        .a2ui-std-btn.primary { background: var(--a2ui-color-accent); color: #fff; border-color: var(--a2ui-color-accent); box-shadow: 0 4px 12px -4px rgba(91, 108, 255, 0.45); }
+        .a2ui-std-checkbox { display: flex; align-items: center; gap: 10px; padding: 4px 0; font-family: var(--a2ui-font-sans); font-size: 14px; color: var(--text); }
+        .a2ui-std-checkbox input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--a2ui-color-accent); }
+        .a2ui-std-textfield { display: flex; flex-direction: column; gap: 6px; font-family: var(--a2ui-font-sans); }
+        .a2ui-std-textfield-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; font-weight: 600; }
+        .a2ui-std-textfield-input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--asst-border); border-radius: 10px; font: inherit; font-size: 14px; color: var(--text); background: #faf7f1; }
+        .a2ui-std-textfield-input:focus { outline: none; border-color: var(--a2ui-color-accent); background: #fff; }
+        .a2ui-std-mc { display: flex; flex-wrap: wrap; gap: 6px; }
+        .a2ui-std-mc-chips .a2ui-std-mc-option { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--asst-border); background: #faf7f1; color: var(--text); cursor: pointer; transition: background .15s, border-color .15s, transform .08s; }
+        .a2ui-std-mc-chips .a2ui-std-mc-option:active { transform: scale(0.97); }
+        .a2ui-std-mc-chips .a2ui-std-mc-option[aria-pressed="true"] { background: var(--a2ui-color-accent); color: #fff; border-color: var(--a2ui-color-accent); }
+        .a2ui-std-mc-checkbox { flex-direction: column; align-items: stretch; }
+        .a2ui-std-mc-checkbox .a2ui-std-mc-option { font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--asst-border); background: #faf7f1; color: var(--text); cursor: pointer; text-align: left; }
+        .a2ui-std-mc-checkbox .a2ui-std-mc-option[aria-pressed="true"] { background: #fff; border-color: var(--a2ui-color-accent); box-shadow: 0 0 0 1px var(--a2ui-color-accent) inset; }
+      `;
+      document.head.appendChild(tag);
+    }
+
+    const BOUND_KEYS = new Set(["literalString", "literalNumber", "literalBoolean", "literalArray", "path"]);
+    function isBoundValue(o) {
+      const keys = Object.keys(o);
+      return keys.length === 1 && BOUND_KEYS.has(keys[0]);
+    }
+    function resolveValue(v, surface) {
+      if (v == null) return v;
+      if (Array.isArray(v)) return v.map(x => resolveValue(x, surface));
+      if (typeof v !== "object") return v;
+      if (isBoundValue(v)) {
+        if ("literalString" in v) return v.literalString;
+        if ("literalNumber" in v) return v.literalNumber;
+        if ("literalBoolean" in v) return v.literalBoolean;
+        if ("literalArray" in v) return v.literalArray;
+        if ("path" in v) return getByPath(surface.dataModel, v.path);
+      }
+      const out = {};
+      for (const [k, sub] of Object.entries(v)) out[k] = resolveValue(sub, surface);
+      return out;
+    }
+    function getByPath(model, path) {
+      if (!path || path === "/") return model;
+      const parts = path.replace(/^\/+/, "").split("/");
+      let cur = model;
+      for (const p of parts) { if (cur == null) return undefined; cur = cur[p]; }
+      return cur;
+    }
+    function setByPath(model, path, value) {
+      const parts = path.replace(/^\/+/, "").split("/").filter(Boolean);
+      if (!parts.length) return;
+      let cur = model;
+      for (let i = 0; i < parts.length - 1; i++) {
+        if (typeof cur[parts[i]] !== "object" || cur[parts[i]] == null) cur[parts[i]] = {};
+        cur = cur[parts[i]];
+      }
+      cur[parts[parts.length - 1]] = value;
+    }
+
+    const cssEscape = (s) => (window.CSS && CSS.escape) ? CSS.escape(s) : s.replace(/"/g, '\\"');
+
+    function mountSurfaceBubble(surfaceId, el) {
+      const row = document.createElement("div");
+      row.className = "row asst";
+      row.dataset.surface = surfaceId;
+      const slot = document.createElement("div");
+      slot.className = "a2ui-slot";
+      // Top-level standard-catalog surfaces that aren't already a Card get
+      // outer card chrome so they don't render as bare flex containers.
+      const surface = surfaces.get(surfaceId);
+      if (surface && surface.catalogId === STANDARD_CATALOG_ID) el.classList.add("a2ui-std-root");
+      slot.appendChild(el);
+      row.appendChild(slot);
+      appendStreamRow(row);
+      scrollDown();
+    }
+
+    // ── client → server: userAction envelope translation ──────────────
+    // Capture every component-level action, build a v0.8 userAction
+    // envelope, then translate that envelope back into the legacy
+    // `{component, ...context}` shape the agent's prompts still expect.
+    document.addEventListener("a2ui-action", (e) => {
+      const detail = e.detail || {};
+      const name = detail.name;
+      if (!name) return;
+      const envelope = {
+        userAction: {
+          name,
+          surfaceId: e.target?._a2uiSurfaceId ?? null,
+          sourceComponentId: e.target?._a2uiSourceComponentId ?? null,
+          timestamp: new Date().toISOString(),
+          context: detail.context || {},
+        },
+      };
+      handleUserAction(envelope);
+    });
+
+    function handleUserAction(envelope) {
+      const action = envelope.userAction;
+      if (!action) return;
+      const name = action.name;
+      const context = action.context || {};
+      // Pure UI actions — don't echo a user bubble or send to the agent.
+      if (name === "product-detail-close"
+          || name === "payment-challenge-close"
+          || name === "tx-detail-close") return;
+      if (name === "tx-detail-open") {
+        if (context.explorer_url) window.open(context.explorer_url, "_blank", "noreferrer");
+        return;
+      }
+      const legacy = { component: name, ...context };
+      const json = JSON.stringify(legacy);
+      addUserBubble(humanize(legacy));
+      send(`[ui-action] ${json}`);
+    }
 
     const sessionId = `web-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const messagesEl = document.getElementById("messages");
@@ -146,9 +555,6 @@
     }
     const dismissWelcome = () => document.getElementById("welcome")?.remove();
 
-    // Tiny markdown -> HTML for the bits the agent actually emits: bold,
-    // italic, inline code, and paragraph / line breaks. Escapes HTML first
-    // so text is never injected as markup.
     function escapeHtml(s) {
       return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
@@ -175,10 +581,6 @@
       scrollDown();
     }
 
-    // Insert new content above the thinking indicator if it's present, so the
-    // dots stay pinned to the bottom of the message list while the stream is
-    // still open. Mirrors the Android list, where the indicator is the last
-    // item until the stream ends.
     function appendStreamRow(row) {
       const thinking = document.getElementById("thinking");
       if (thinking) messagesEl.insertBefore(row, thinking);
@@ -210,65 +612,24 @@
     }
     const stopThinking = () => document.getElementById("thinking")?.remove();
 
-    function mountA2ui(payload) {
-      const tag = COMPONENT_TAG[payload.component];
-      if (!tag) return;
-      const row = document.createElement("div");
-      row.className = "row asst";
-      const slot = document.createElement("div");
-      slot.className = "a2ui-slot";
-      const el = document.createElement(tag);
-      for (const [k, v] of Object.entries(payload)) {
-        if (k === "component") continue;
-        el[k] = v;
+    function humanize(o) {
+      switch (o.component) {
+        case "chip-group": return o.value ? o.value.charAt(0).toUpperCase() + o.value.slice(1) : "Selection";
+        case "card-grid":  return o.name || "View item";
+        case "product-detail": return `Add ${o.name || "item"} to order`;
+        case "product-detail-followup": return `Tell me more about ${o.name || "this"}`;
+        case "product-detail-visit": return `Visit ${o.vendor || "vendor"}`;
+        case "form":       return "Place order";
+        case "confirmation-card": return "Confirmed";
+        case "payment-completed": return "Paid";
+        default:           return "Selection";
       }
-      slot.appendChild(el);
-      row.appendChild(slot);
-      appendStreamRow(row);
-      scrollDown();
     }
 
-    function humanize(json) {
-      try {
-        const o = JSON.parse(json);
-        switch (o.component) {
-          case "chip-group": return o.value ? o.value.charAt(0).toUpperCase() + o.value.slice(1) : "Selection";
-          case "card-grid":  return o.name || "View item";
-          case "product-detail": return `Add ${o.name || "item"} to order`;
-          case "product-detail-followup": return `Tell me more about ${o.name || "this"}`;
-          case "product-detail-visit": return `Visit ${o.vendor || "vendor"}`;
-          case "form":       return "Place order";
-          case "confirmation-card": return "Confirmed";
-          default:           return "Selection";
-        }
-      } catch { return "Selection"; }
-    }
-
-    // Same bridge shape Android exposes — components stay 100% unchanged.
-    window.AndroidBridge = {
-      onAction(json) {
-        // Pure UI actions — don't echo a user bubble or send to the agent.
-        try {
-          const o = JSON.parse(json);
-          // Close X on any modal-sheet component is a pure UI dismiss.
-          if (
-            o.component === "product-detail-close" ||
-            o.component === "payment-challenge-close" ||
-            o.component === "tx-detail-close"
-          ) return;
-          // Confirmation-card tx-detail tap: Android pops a modal sheet; on the
-          // web we have no chat-level sheet system, so open the explorer in a
-          // new tab.
-          if (o.component === "tx-detail-open") {
-            if (o.explorer_url) window.open(o.explorer_url, "_blank", "noreferrer");
-            return;
-          }
-        } catch { /* fall through */ }
-        addUserBubble(humanize(json));
-        send(`[ui-action] ${json}`);
-      },
-      log(msg) { console.log("[a2ui]", msg); },
-    };
+    // Android-only bridge methods kept as stubs on the web so the
+    // payment-challenge component's `if (window.AndroidBridge?.foo)`
+    // guards fall through to the web fetch fallbacks.
+    window.AndroidBridge = { log(msg) { console.log("[a2ui]", msg); } };
 
     let sending = false;
     async function send(userMessage) {
@@ -287,8 +648,6 @@
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
-        // SSE separates events by a blank line — \r\n\r\n on most servers,
-        // \n\n on some. Match either.
         const SEP = /\r?\n\r?\n/;
         while (true) {
           const { value, done } = await reader.read();
@@ -311,7 +670,10 @@
               asstBubble.innerHTML = renderMarkdown(asstText);
               scrollDown();
             } else if (event === "a2ui") {
-              mountA2ui(JSON.parse(data));
+              // Each SSE frame carries one v0.8 message (surfaceUpdate,
+              // beginRendering, ...). beginRendering is the trigger that
+              // creates a chat-row bubble; surfaceUpdate buffers state.
+              ingest(JSON.parse(data));
               asstBubble = null;
               asstText = "";
             } else if (event === "end") {

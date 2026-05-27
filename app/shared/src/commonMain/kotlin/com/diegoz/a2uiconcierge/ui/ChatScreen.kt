@@ -38,6 +38,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.diegoz.a2uiconcierge.chat.Message
 import com.diegoz.a2uiconcierge.di.AppConfig
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,8 +64,7 @@ fun ChatScreen() {
     val haptic = LocalHapticFeedback.current
     LaunchedEffect(messages.size) {
         val last = messages.lastOrNull()
-        if (last is Message.AgentA2ui && last.fragments.lastOrNull()?.get("component")?.toString()
-                ?.contains("confirmation-card") == true) {
+        if (last is Message.AgentA2ui && isConfirmationSurface(last.fragments)) {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         }
     }
@@ -127,7 +130,7 @@ fun ChatScreen() {
             },
         ) {
             A2uiSheetContent(
-                fragment = sheetFragment,
+                fragments = sheetFragment,
                 onAction = vm::onA2uiAction,
                 backendBaseUrl = config.backendBaseUrl,
             )
@@ -145,7 +148,7 @@ fun ChatScreen() {
             tonalElevation = 0.dp,
         ) {
             A2uiSheetContent(
-                fragment = paymentFragment,
+                fragments = paymentFragment,
                 onAction = vm::onA2uiAction,
                 backendBaseUrl = config.backendBaseUrl,
             )
@@ -163,7 +166,7 @@ fun ChatScreen() {
             tonalElevation = 0.dp,
         ) {
             A2uiSheetContent(
-                fragment = txFragment,
+                fragments = txFragment,
                 onAction = vm::onA2uiAction,
                 backendBaseUrl = config.backendBaseUrl,
             )
@@ -225,4 +228,29 @@ private fun ChatList(
             }
         }
     }
+}
+
+/**
+ * Confirmation surfaces are now built from the standard catalog (Card →
+ * Column → ...), so we can't distinguish them by root component type
+ * alone. Instead we look for the marker ``tx-detail-open`` Button action
+ * that only confirmation surfaces emit.
+ */
+private fun isConfirmationSurface(fragments: List<JsonObject>): Boolean =
+    hasButtonAction(fragments, "tx-detail-open")
+
+private fun hasButtonAction(fragments: List<JsonObject>, actionName: String): Boolean {
+    for (f in fragments) {
+        val update = f["surfaceUpdate"] as? JsonObject ?: continue
+        val components = update["components"] as? JsonArray ?: continue
+        for (item in components) {
+            val obj = item as? JsonObject ?: continue
+            val componentObj = obj["component"] as? JsonObject ?: continue
+            val buttonProps = componentObj["Button"] as? JsonObject ?: continue
+            val action = buttonProps["action"] as? JsonObject ?: continue
+            val name = action["name"]?.jsonPrimitive?.contentOrNull
+            if (name == actionName) return true
+        }
+    }
+    return false
 }

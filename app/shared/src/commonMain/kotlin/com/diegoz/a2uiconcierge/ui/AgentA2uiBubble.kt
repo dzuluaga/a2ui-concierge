@@ -28,9 +28,17 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.diegoz.a2uiconcierge.a2ui.A2uiBridge
 import com.diegoz.a2uiconcierge.a2ui.A2uiWebContent
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
+/**
+ * Hosts one A2UI v0.8 *surface* inside a chat bubble. ``fragments`` is the
+ * accumulated list of v0.8 messages whose surfaceId matches this bubble
+ * (typically a surfaceUpdate followed by a beginRendering); each is
+ * replayed through ``window.a2ui.ingest`` in order.
+ */
 @Composable
 fun AgentA2uiBubble(
     fragments: List<JsonObject>,
@@ -61,9 +69,11 @@ fun AgentA2uiBubble(
         label = "a2ui-bubble-height",
     )
 
-    val component = fragments.lastOrNull()?.get("component")?.jsonPrimitive?.content
-    val isConfirmation = component == "confirmation-card"
-    val isProductDetail = component == "product-detail"
+    val rootType = primaryComponentType(fragments)
+    // Standard-catalog confirmation surfaces root at "Card"; we detect them
+    // by the marker tx-detail-open Button action they always include.
+    val isConfirmation = hasButtonAction(fragments, "tx-detail-open")
+    val isProductDetail = rootType == "ProductDetail"
 
     val popScale = remember {
         Animatable(
@@ -75,7 +85,7 @@ fun AgentA2uiBubble(
         )
     }
     val popTranslateY = remember { Animatable(if (isProductDetail) -60f else 0f) }
-    LaunchedEffect(component) {
+    LaunchedEffect(rootType) {
         when {
             isConfirmation -> {
                 popScale.snapTo(0.85f)
@@ -149,10 +159,11 @@ fun AgentA2uiBubble(
 /**
  * Sheet variant — fills available space and lets the web content scroll natively.
  * Used inside ModalBottomSheet for product-detail, payment-challenge, tx-detail.
+ * Accepts a full v0.8 fragment list (surfaceUpdate + beginRendering + ...).
  */
 @Composable
 fun A2uiSheetContent(
-    fragment: JsonObject,
+    fragments: List<JsonObject>,
     onAction: (String) -> Unit,
     backendBaseUrl: String,
     modifier: Modifier = Modifier,
@@ -169,9 +180,50 @@ fun A2uiSheetContent(
     Box(modifier = modifier.fillMaxSize()) {
         A2uiWebContent(
             bridge = bridge,
-            fragments = listOf(fragment),
+            fragments = fragments,
             isSheet = true,
             modifier = Modifier.fillMaxSize(),
         )
     }
+}
+
+/**
+ * Resolve the root component type from the v0.8 fragment stream.
+ * v0.8 specifies the root by id via ``beginRendering.root``; the first
+ * entry of ``surfaceUpdate.components`` is not guaranteed to be the root,
+ * so we look up by id. Used to pick the per-component entrance animation.
+ */
+private fun primaryComponentType(fragments: List<JsonObject>): String? {
+    val rootId = fragments.firstNotNullOfOrNull { f ->
+        (f["beginRendering"] as? JsonObject)
+            ?.get("root")?.jsonPrimitive?.contentOrNull
+    } ?: return null
+    for (frame in fragments) {
+        val update = frame["surfaceUpdate"] as? JsonObject ?: continue
+        val components = update["components"] as? JsonArray ?: continue
+        for (item in components) {
+            val obj = item as? JsonObject ?: continue
+            if (obj["id"]?.jsonPrimitive?.contentOrNull != rootId) continue
+            val componentObj = obj["component"] as? JsonObject ?: continue
+            return componentObj.keys.firstOrNull()
+        }
+    }
+    return null
+}
+
+/** True if any Button in the buffered surface declares ``action.name`` == [actionName]. */
+private fun hasButtonAction(fragments: List<JsonObject>, actionName: String): Boolean {
+    for (frame in fragments) {
+        val update = frame["surfaceUpdate"] as? JsonObject ?: continue
+        val components = update["components"] as? JsonArray ?: continue
+        for (item in components) {
+            val obj = item as? JsonObject ?: continue
+            val componentObj = obj["component"] as? JsonObject ?: continue
+            val buttonProps = componentObj["Button"] as? JsonObject ?: continue
+            val action = buttonProps["action"] as? JsonObject ?: continue
+            val name = action["name"]?.jsonPrimitive?.contentOrNull
+            if (name == actionName) return true
+        }
+    }
+    return false
 }

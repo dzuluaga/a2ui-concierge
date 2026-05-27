@@ -163,7 +163,8 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
 
 async def run_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
     """Execute a tool. Returns either tool output (for state-changing tools)
-    or an A2UI fragment (for present_* tools, prefixed with `_a2ui`)."""
+    or a list of v0.8 A2UI messages (for present_* tools, under `_a2ui` —
+    typically a ``surfaceUpdate`` followed by a ``beginRendering``)."""
     if name == "search_catalog":
         return {"results": catalog.search(**args)}
     if name == "get_product":

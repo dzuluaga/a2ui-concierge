@@ -183,7 +183,7 @@ In a separate terminal:
 cd backend
 echo "ANTHROPIC_API_KEY=sk-ant-..." > .env       # gitignored
 uv sync --all-extras
-uv run uvicorn concierge.app:app --port 8000
+uv run uvicorn concierge.app:app --port 8000 --host 0.0.0.0
 ```
 
 `/health` should now return `{"status":"ok"}`.
@@ -212,7 +212,7 @@ extra configuration needed.
 
 ```shell
 cd host-bundle && npm install && npm run build:android
-cd ../app && ./gradlew :app:installDebug
+cd ../app && ./gradlew installDebug
 adb shell am start -n com.diegoz.a2uiconcierge/.MainActivity
 ```
 
@@ -229,7 +229,7 @@ and rebuild:
 
 ```shell
 cd host-bundle && npm run build:android
-cd ../app && ./gradlew :app:installDebug
+cd ../app && ./gradlew installDebug
 ```
 
 #### Physical device (Wi-Fi, no USB)
@@ -255,6 +255,12 @@ Run the `iosApp` scheme in Xcode on a Simulator. The default `BACKEND_BASE_URL` 
 is `http://localhost:8000`, which routes to the host machine from the simulator automatically.
 
 For a **physical iOS device**, change the constant to your machine's LAN IP before building.
+
+### 4. Wallet App
+
+You should have the latest version of the Multipaz TestApp (or any other wallet app that supports presentation using W3C DC API) on your device
+
+You can download the multipaz testapp from [here](https://apps.multipaz.org/).
 
 ## Demo script
 

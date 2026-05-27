@@ -1,21 +1,22 @@
 {
-  "component": "product-detail",
-  "product": {
-    "id": "bar-pendant",
-    "name": "Bar Pendant",
-    "price": 124,
-    "image_url": "https://images.example.com/jewelry/bar-pendant.jpg"
-  },
-  "variant_groups": [
-    {
-      "name": "finish",
-      "options": ["gold", "silver", "rose gold"],
-      "select": "single"
-    },
-    {
-      "name": "length",
-      "options": ["16\"", "18\""],
-      "select": "single"
+  "_description": "Canonical v0.8 root component for the ProductDetail surface. The full wire emission is a (surfaceUpdate, beginRendering) pair wrapping this root.",
+  "catalogId": "lumen.com:concierge/v1",
+  "root": {
+    "id": "c-root",
+    "component": {
+      "ProductDetail": {
+        "product": {
+          "id": "bar-pendant",
+          "name": "Bar Pendant",
+          "price": 124,
+          "imageUrl": "https://images.example.com/jewelry/bar-pendant.jpg"
+        },
+        "variantGroups": [
+          {"name": "finish", "options": ["gold", "silver", "rose gold"], "select": "single"},
+          {"name": "length", "options": ["16\"", "18\""], "select": "single"}
+        ],
+        "action": {"name": "product-detail"}
+      }
     }
-  ]
+  }
 }

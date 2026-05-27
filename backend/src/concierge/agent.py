@@ -193,15 +193,12 @@ class GiftAgent:
 
             if choice.finish_reason != "tool_calls" or not tool_calls:
                 if choice.finish_reason == "length":
-                    yield AgentEvent("a2ui", {
-                        "component": "chip-group",
-                        "question": "There's more — want me to keep going?",
-                        "select": "single",
-                        "options": [
-                            {"value": "continue", "label": "Show me more"},
-                            {"value": "narrow", "label": "Narrow it down"},
-                        ],
-                    })
+                    from concierge import a2ui
+                    for msg in a2ui.chips(
+                        question="There's more — want me to keep going?",
+                        options=[("continue", "Show me more"), ("narrow", "Narrow it down")],
+                    ):
+                        yield AgentEvent("a2ui", msg)
                 yield AgentEvent("end", None)
                 return
 
@@ -247,7 +244,12 @@ class GiftAgent:
                     else:
                         output = await run_tool(name, args)
                         if "_a2ui" in output:
-                            yield AgentEvent("a2ui", output["_a2ui"])
+                            # Each present_* tool returns a list of v0.8
+                            # messages (surfaceUpdate + beginRendering); emit
+                            # them in order as separate SSE events so the
+                            # client interprets them per spec.
+                            for msg in output["_a2ui"]:
+                                yield AgentEvent("a2ui", msg)
                             tool_content = json.dumps({"rendered": True})
                         else:
                             tool_content = json.dumps(output)

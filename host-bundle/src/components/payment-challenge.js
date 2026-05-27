@@ -1,33 +1,38 @@
 import { LitElement, html, css } from "lit";
 
 /**
- * Renders an x402 / DPC payment sheet inline in the chat.
+ * v0.8 custom-catalog component "PaymentChallenge". Renders an x402 / DPC
+ * payment sheet. Props are camelCased per spec convention (orderId,
+ * amountDisplay, dpcDcqlQueryJson, requiresAgeVerification, ...). Actions
+ * are surfaced as `a2ui-action` events; the shim wraps each in a v0.8
+ * userAction envelope.
  *
  * The user selects a payment method before the Pay button activates:
  *   • Card Wallet  — presents a DPC via Android Credential Manager, then
  *                    POSTs to /dpc/settle (mock settlement for demo).
  *   • USDC on Base — StrongBox-backed EIP-3009 on Android, mock-settle on web.
  *
- * When `requires_age_verification` is true, an age verification step is shown
+ * When `requiresAgeVerification` is true, an age verification step is shown
  * first. Both age and payment use Android Credential Manager on device.
  */
 export class PaymentChallenge extends LitElement {
   static properties = {
-    order_id: {},
+    orderId: {},
     label: {},
-    amount_display: {},
+    amountDisplay: {},
     items: { type: Array },
     challenge: { type: Object },
-    requires_age_verification: { type: Boolean },
-    age_dcql_query_json: {},
-    dpc_dcql_query_json: {},
-    loyalty_discount_pct: { type: Number },
-    loyalty_dcql_query_json: {},
+    requiresAgeVerification: { type: Boolean },
+    ageDcqlQueryJson: {},
+    dpcDcqlQueryJson: {},
+    loyaltyDiscountPct: { type: Number },
+    loyaltyDcqlQueryJson: {},
+    action: { type: Object },
     // internal
-    payment_method: { state: true }, // null | "card" | "usdc"
-    status: { state: true },         // idle | dpc_pending | paying | done | error
-    age_status: { state: true },     // idle | verifying | verified | failed
-    loyalty_status: { state: true }, // idle | verifying | verified | failed
+    payment_method: { state: true },
+    status: { state: true },
+    age_status: { state: true },
+    loyalty_status: { state: true },
     discount_amount: { state: true },
     effective_total: { state: true },
     effective_challenge: { state: true },
@@ -74,7 +79,6 @@ export class PaymentChallenge extends LitElement {
     .total { border-top: 1px solid #ece8e0; margin-top: 6px; padding-top: 10px; font-weight: 600; }
     .total .amt { font-size: 15px; }
 
-    /* ── age verification section ── */
     .age-section {
       margin-top: 14px;
       padding: 12px 14px;
@@ -90,11 +94,7 @@ export class PaymentChallenge extends LitElement {
       border-color: #f5c6cb;
       background: #fff5f5;
     }
-    .age-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+    .age-row { display: flex; align-items: center; gap: 10px; }
     .age-icon { font-size: 20px; line-height: 1; flex-shrink: 0; }
     .age-text { flex: 1; }
     .age-title { font-size: 13px; font-weight: 600; color: #1B1B1F; }
@@ -121,7 +121,6 @@ export class PaymentChallenge extends LitElement {
     .verify-btn:active:not(:disabled) { transform: scale(0.985); }
     .verify-btn:disabled { opacity: .55; cursor: default; }
 
-    /* ── loyalty section ── */
     .loyalty-section {
       margin-top: 14px;
       padding: 12px 14px;
@@ -159,7 +158,6 @@ export class PaymentChallenge extends LitElement {
       padding: 6px 0; font-size: 13.5px; color: #2d7a2d; font-weight: 600;
     }
 
-    /* ── payment method selector ── */
     .method-section { margin-top: 16px; }
     .section-label {
       font-size: 10.5px;
@@ -216,7 +214,6 @@ export class PaymentChallenge extends LitElement {
       color: #fff;
     }
 
-    /* ── pay button ── */
     .pay {
       margin-top: 14px; width: 100%;
       padding: 13px 18px; border-radius: 14px; border: 0;
@@ -236,24 +233,25 @@ export class PaymentChallenge extends LitElement {
 
   constructor() {
     super();
+    this.items = [];
+    this.action = { name: "payment-challenge" };
     this.payment_method = null;
     this.status = "idle";
     this.age_status = "idle";
     this.loyalty_status = "idle";
     this.discount_amount = 0;
-    this.effective_total = null;   // null = use amount_display from server
+    this.effective_total = null;
     this.effective_challenge = null;
     this.effective_order_id = null;
     this.error = "";
   }
 
-  // The order_id / challenge to actually use for settlement (may be updated after loyalty).
-  get _orderId() { return this.effective_order_id ?? this.order_id; }
+  get _orderId() { return this.effective_order_id ?? this.orderId; }
   get _challenge() { return this.effective_challenge ?? this.challenge; }
 
   get _payEnabled() {
     if (!this.payment_method) return false;
-    if (this.requires_age_verification && this.age_status !== "verified") return false;
+    if (this.requiresAgeVerification && this.age_status !== "verified") return false;
     return this.status === "idle" || this.status === "error";
   }
 
@@ -265,7 +263,7 @@ export class PaymentChallenge extends LitElement {
     if (this.status === "done") return "Paid ✓";
     if (!this.payment_method) return "Select a payment method";
     if (this.payment_method === "card") return "Pay with Card";
-    return `Pay ${this.amount_display} · USDC`;
+    return `Pay ${this.amountDisplay} · USDC`;
   }
 
   get _hint() {
@@ -279,7 +277,7 @@ export class PaymentChallenge extends LitElement {
   render() {
     const displayTotal = this.effective_total != null
       ? `$${this.effective_total.toFixed(2)}`
-      : this.amount_display;
+      : this.amountDisplay;
     return html`
       <button class="close" aria-label="Close" @click=${this._close}>✕</button>
       <div class="badge">Payment</div>
@@ -298,8 +296,8 @@ export class PaymentChallenge extends LitElement {
         <div class="row total"><span>Total</span><span class="amt">${displayTotal}</span></div>
       </div>
 
-      ${this.requires_age_verification ? this._renderAgeSection() : null}
-      ${this.loyalty_discount_pct ? this._renderLoyaltySection() : null}
+      ${this.requiresAgeVerification ? this._renderAgeSection() : null}
+      ${this.loyaltyDiscountPct ? this._renderLoyaltySection() : null}
       ${this._renderMethodSection()}
 
       <button
@@ -415,7 +413,7 @@ export class PaymentChallenge extends LitElement {
                 : "Present your digital membership card for an instant discount."}
             </div>
           </div>
-          <div class="loyalty-pill">${this.loyalty_discount_pct}% off</div>
+          <div class="loyalty-pill">${this.loyaltyDiscountPct}% off</div>
         </div>
         <button
           class="loyalty-btn"
@@ -427,9 +425,13 @@ export class PaymentChallenge extends LitElement {
       </div>`;
   }
 
-  _close() {
-    window.AndroidBridge?.onAction(JSON.stringify({ component: "payment-challenge-close" }));
+  _dispatch(name, context) {
+    this.dispatchEvent(new CustomEvent("a2ui-action", {
+      bubbles: true, composed: true, detail: { name, context },
+    }));
   }
+
+  _close() { this._dispatch("payment-challenge-close", {}); }
 
   async _applyLoyalty() {
     this.loyalty_status = "verifying";
@@ -445,13 +447,12 @@ export class PaymentChallenge extends LitElement {
         this._onLoyaltyApplied(result);
       };
       try {
-        window.AndroidBridge.applyLoyalty(this._orderId, this.loyalty_dcql_query_json || "", cb);
+        window.AndroidBridge.applyLoyalty(this._orderId, this.loyaltyDcqlQueryJson || "", cb);
       } catch (e) {
         delete window[cb];
         this.loyalty_status = "failed";
       }
     } else {
-      // Web fallback: call backend directly.
       try {
         const res = await fetch("/loyalty/apply", {
           method: "POST",
@@ -485,13 +486,12 @@ export class PaymentChallenge extends LitElement {
         this.age_status = success ? "verified" : "failed";
       };
       try {
-        window.AndroidBridge.verifyAge(this.age_dcql_query_json || "", cb);
+        window.AndroidBridge.verifyAge(this.ageDcqlQueryJson || "", cb);
       } catch (e) {
         delete window[cb];
         this.age_status = "failed";
       }
     } else {
-      // Web fallback: grant immediately for demo.
       await new Promise(r => setTimeout(r, 800));
       this.age_status = "verified";
     }
@@ -519,12 +519,11 @@ export class PaymentChallenge extends LitElement {
     try {
       const data = await this._settleDpc();
       this.status = "done";
-      window.AndroidBridge?.onAction(JSON.stringify({
-        component: "payment-completed",
+      this._dispatch("payment-completed", {
         order_id: this._orderId,
         tx_hash: data.tx_hash,
         explorer_url: data.explorer_url ?? null,
-      }));
+      });
     } catch (e) {
       this.status = "error";
       this.error = e.message || String(e);
@@ -549,7 +548,6 @@ export class PaymentChallenge extends LitElement {
         }
       });
     }
-    // Web fallback: direct fetch (works when served over HTTP).
     return fetch("/dpc/settle", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -565,12 +563,11 @@ export class PaymentChallenge extends LitElement {
     try {
       const data = await this._settle();
       this.status = "done";
-      window.AndroidBridge?.onAction(JSON.stringify({
-        component: "payment-completed",
+      this._dispatch("payment-completed", {
         order_id: this._orderId,
         tx_hash: data.tx_hash,
         explorer_url: data.explorer_url ?? null,
-      }));
+      });
     } catch (e) {
       this.status = "error";
       this.error = e.message || String(e);
@@ -583,13 +580,12 @@ export class PaymentChallenge extends LitElement {
         const cb = `__dpc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
         window[cb] = (success) => { delete window[cb]; resolve(!!success); };
         try {
-          window.AndroidBridge.verifyDpc(this.dpc_dcql_query_json || "", cb);
+          window.AndroidBridge.verifyDpc(this.dpcDcqlQueryJson || "", cb);
         } catch (e) {
           delete window[cb];
           resolve(false);
         }
       } else {
-        // Web fallback: grant immediately for demo.
         setTimeout(() => resolve(true), 600);
       }
     });

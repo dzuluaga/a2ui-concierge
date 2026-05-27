@@ -1,10 +1,14 @@
 import { LitElement, html, css } from "lit";
 
+// v0.8 custom-catalog component "ProductDetail". Camel-cased per spec
+// convention (variantGroups, requiresAgeVerification); the embedded
+// product sub-object uses imageUrl/salePrice/inStock.
 export class ProductDetail extends LitElement {
   static properties = {
     product: {},
-    variant_groups: { type: Array },
-    requires_age_verification: { type: Boolean },
+    variantGroups: { type: Array },
+    requiresAgeVerification: { type: Boolean },
+    action: { type: Object },
     selection: { state: true },
     activeImage: { state: true },
   };
@@ -21,8 +25,6 @@ export class ProductDetail extends LitElement {
     .gallery {
       position: relative;
       background: #f4efe6;
-      /* Hint to the browser that this region is for horizontal panning so
-         vertical-scroll containers don't fight the carousel swipes. */
       touch-action: pan-x;
     }
     .close {
@@ -51,8 +53,6 @@ export class ProductDetail extends LitElement {
       display: flex;
       overflow-x: auto;
       overflow-y: hidden;
-      /* proximity snap is more forgiving than mandatory on small devices —
-         a half-flick lands on the nearest snap rather than rubber-banding. */
       scroll-snap-type: x proximity;
       scroll-snap-stop: always;
       scrollbar-width: none;
@@ -72,7 +72,6 @@ export class ProductDetail extends LitElement {
       object-fit: cover;
       display: block;
       background: #f4efe6;
-      /* Stop image drag-and-drop from cancelling the pan gesture. */
       pointer-events: none;
       user-select: none;
       -webkit-user-drag: none;
@@ -234,6 +233,8 @@ export class ProductDetail extends LitElement {
   `;
   constructor() {
     super();
+    this.variantGroups = [];
+    this.action = { name: "product-detail" };
     this.selection = {};
     this.activeImage = 0;
   }
@@ -249,10 +250,10 @@ export class ProductDetail extends LitElement {
   }
   render() {
     const p = this.product || {};
-    const images = (p.images && p.images.length) ? p.images : [p.image_url].filter(Boolean);
+    const images = (p.images && p.images.length) ? p.images : [p.imageUrl].filter(Boolean);
     const vendor = p.vendor || "Lumen Goods";
     const initial = (vendor[0] || "L").toUpperCase();
-    const onSale = p.sale_price != null && p.sale_price < p.price;
+    const onSale = p.salePrice != null && p.salePrice < p.price;
     return html`
       <div class="gallery">
         <button class="close" aria-label="Close" @click=${this._close}>✕</button>
@@ -279,18 +280,18 @@ export class ProductDetail extends LitElement {
           <div class="vendor-mark">${initial}</div>
           <div class="vendor-text">
             <div class="vendor-name">${vendor}</div>
-            <div class="vendor-sub">${p.in_stock === false ? "Out of stock" : "In stock"}</div>
+            <div class="vendor-sub">${p.inStock === false ? "Out of stock" : "In stock"}</div>
           </div>
         </div>
         <div class="price-block">
-          <span class="price ${onSale ? "sale" : ""}">$${onSale ? p.sale_price : p.price}</span>
+          <span class="price ${onSale ? "sale" : ""}">$${onSale ? p.salePrice : p.price}</span>
           ${onSale ? html`<span class="price-orig">$${p.price}</span>` : null}
         </div>
       </div>
 
       ${p.description ? html`<div class="description">${p.description}</div>` : null}
 
-      ${this.requires_age_verification ? html`
+      ${this.requiresAgeVerification ? html`
         <div class="age-notice">
           <span class="age-notice-icon">🪪</span>
           <span class="age-notice-text">
@@ -300,7 +301,7 @@ export class ProductDetail extends LitElement {
         </div>
       ` : null}
 
-      ${(this.variant_groups || []).map(g => html`
+      ${(this.variantGroups || []).map(g => html`
         <div class="group">
           <div class="label">${g.name}</div>
           ${g.options.map(o => html`
@@ -320,33 +321,31 @@ export class ProductDetail extends LitElement {
     `;
   }
   _pick(group, value) { this.selection = { ...this.selection, [group]: value }; }
-  _confirm() {
-    window.AndroidBridge?.onAction(JSON.stringify({
-      component: "product-detail",
-      product_id: this.product.id,
-      name: this.product.name,
-      variants: this.selection,
+  _dispatch(name, context) {
+    this.dispatchEvent(new CustomEvent("a2ui-action", {
+      bubbles: true, composed: true, detail: { name, context },
     }));
+  }
+  _confirm() {
+    this._dispatch(this.action?.name || "product-detail", {
+      product_id: this.product?.id,
+      name: this.product?.name,
+      variants: this.selection,
+    });
   }
   _visit() {
-    window.AndroidBridge?.onAction(JSON.stringify({
-      component: "product-detail-visit",
-      product_id: this.product.id,
-      name: this.product.name,
-      vendor: this.product.vendor,
-    }));
+    this._dispatch("product-detail-visit", {
+      product_id: this.product?.id,
+      name: this.product?.name,
+      vendor: this.product?.vendor,
+    });
   }
   _followup() {
-    window.AndroidBridge?.onAction(JSON.stringify({
-      component: "product-detail-followup",
-      product_id: this.product.id,
-      name: this.product.name,
-    }));
+    this._dispatch("product-detail-followup", {
+      product_id: this.product?.id,
+      name: this.product?.name,
+    });
   }
-  _close() {
-    window.AndroidBridge?.onAction(JSON.stringify({
-      component: "product-detail-close",
-    }));
-  }
+  _close() { this._dispatch("product-detail-close", {}); }
 }
 customElements.define("a2ui-product-detail", ProductDetail);

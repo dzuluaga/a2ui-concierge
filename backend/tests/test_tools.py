@@ -1,61 +1,86 @@
 from concierge.tools import run_tool
 
-def test_search_catalog_returns_results_list():
-    out = run_tool("search_catalog", {"category": "jewelry", "price_max": 150})
+
+def _root_props(messages: list[dict], expected_type: str) -> dict:
+    """Extract the root component's resolved props from a (surfaceUpdate,
+    beginRendering) bundle, asserting the expected component type. Use for
+    custom-catalog builders that produce a single composite root."""
+    su = next(m["surfaceUpdate"] for m in messages if "surfaceUpdate" in m)
+    begin = next(m["beginRendering"] for m in messages if "beginRendering" in m)
+    root = next(c for c in su["components"] if c["id"] == begin["root"])
+    [(component_type, props)] = root["component"].items()
+    assert component_type == expected_type
+    return props
+
+
+def _components_of_type(messages: list[dict], type_name: str) -> list[dict]:
+    """All standard-catalog components of [type_name] across the surface."""
+    su = next(m["surfaceUpdate"] for m in messages if "surfaceUpdate" in m)
+    return [c["component"][type_name] for c in su["components"] if type_name in c["component"]]
+
+
+async def test_search_catalog_returns_results_list():
+    out = await run_tool("search_catalog", {"category": "jewelry", "price_max": 150})
     assert "results" in out
     assert len(out["results"]) > 0
 
-def test_get_product_returns_id():
-    out = run_tool("get_product", {"product_id": "lum-jewel-001"})
+async def test_get_product_returns_id():
+    out = await run_tool("get_product", {"product_id": "lum-jewel-001"})
     assert out["id"] == "lum-jewel-001"
 
-def test_place_order_returns_payment_challenge():
-    out = run_tool("place_order", {
+async def test_place_order_returns_payment_challenge():
+    out = await run_tool("place_order", {
         "product_id": "lum-jewel-001",
         "variant_options": {"finish": "silver", "length": "16\""},
         "gift_wrap": True,
         "address": "235 Pine St, Brooklyn NY",
     })
-    payload = out["_a2ui"]
-    assert payload["component"] == "payment-challenge"
-    assert payload["order_id"].startswith("A2UI-")
-    challenge = payload["challenge"]
+    props = _root_props(out["_a2ui"], "PaymentChallenge")
+    assert props["orderId"].startswith("A2UI-")
+    challenge = props["challenge"]
     assert challenge["amount_units"] > 0
     assert challenge["asset"].startswith("0x") and len(challenge["asset"]) == 42
     assert challenge["nonce"].startswith("0x") and len(challenge["nonce"]) == 66
     assert challenge["valid_before"] > challenge["valid_after"]
     # Total = sale_price (or price) + $8 gift wrap; reflected in line items.
-    labels = [li["label"] for li in payload["items"]]
+    labels = [li["label"] for li in props["items"]]
     assert "Gift wrap" in labels
 
-def test_present_chips_returns_a2ui_payload():
-    out = run_tool("present_chips", {
+
+async def test_present_chips_returns_a2ui_payload():
+    out = await run_tool("present_chips", {
         "question": "What vibe?",
         "options": [{"value": "jewelry", "label": "Jewelry"}],
     })
     assert "_a2ui" in out
-    assert out["_a2ui"]["component"] == "chip-group"
-
-def test_present_form_default_includes_three_fields():
-    out = run_tool("present_form", {})
-    fields = out["_a2ui"]["fields"]
-    names = [f["name"] for f in fields]
-    assert names == ["gift_wrap", "note", "ship_to"]
+    texts = [t["text"] for t in _components_of_type(out["_a2ui"], "Text")]
+    assert {"literalString": "What vibe?"} in texts
+    buttons = _components_of_type(out["_a2ui"], "Button")
+    assert any(b["action"]["name"] == "chip-group" for b in buttons)
 
 
-def test_x402_settle_returns_tx_hash():
+async def test_present_form_default_includes_three_fields():
+    out = await run_tool("present_form", {})
+    # gift_wrap → CheckBox path /gift_wrap; note + ship_to → TextField paths.
+    checkbox = _components_of_type(out["_a2ui"], "CheckBox")[0]
+    assert checkbox["value"] == {"path": "/gift_wrap"}
+    tf_paths = {tf["text"]["path"] for tf in _components_of_type(out["_a2ui"], "TextField")}
+    assert tf_paths == {"/note", "/ship_to"}
+
+
+async def test_x402_settle_returns_tx_hash():
     """Mock settle path: place an order, then settle returns a tx hash and
     flips the order record to settled. Idempotent on repeat call."""
     import asyncio
     from concierge import payments
 
-    out = run_tool("place_order", {
+    out = await run_tool("place_order", {
         "product_id": "lum-jewel-001",
         "variant_options": {"finish": "silver"},
         "gift_wrap": False,
         "address": "1 Main St",
     })
-    order_id = out["_a2ui"]["order_id"]
+    order_id = _root_props(out["_a2ui"], "PaymentChallenge")["orderId"]
 
     settled = asyncio.run(payments.settle(order_id=order_id, signed_envelope={"x": "stub"}))
     assert settled["tx_hash"].startswith("0x") and len(settled["tx_hash"]) == 66

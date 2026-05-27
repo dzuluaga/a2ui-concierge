@@ -1,27 +1,36 @@
 {
-  "component": "card-grid",
-  "reasoning": "Three minimalist jewelry pieces that pair elegance with everyday wear.",
-  "items": [
-    {
-      "id": "thread-necklace",
-      "name": "Thread Necklace",
-      "price": 89,
-      "image_url": "https://images.example.com/jewelry/thread-necklace.jpg",
-      "why": "Delicate 14k gold-fill thread — effortless layering for any neckline."
-    },
-    {
-      "id": "bar-pendant",
-      "name": "Bar Pendant",
-      "price": 124,
-      "image_url": "https://images.example.com/jewelry/bar-pendant.jpg",
-      "why": "Clean horizontal bar in her choice of finish — a modern everyday staple."
-    },
-    {
-      "id": "open-cuff",
-      "name": "Open Cuff",
-      "price": 142,
-      "image_url": "https://images.example.com/jewelry/open-cuff.jpg",
-      "why": "Sculptural open cuff that fits most wrists — minimal yet eye-catching."
+  "_description": "Canonical v0.8 root component for the CardGrid surface. The full wire emission is a (surfaceUpdate, beginRendering) pair wrapping this root.",
+  "catalogId": "lumen.com:concierge/v1",
+  "root": {
+    "id": "c-root",
+    "component": {
+      "CardGrid": {
+        "reasoning": {"literalString": "Three minimalist jewelry pieces that pair elegance with everyday wear."},
+        "items": [
+          {
+            "id": "thread-necklace",
+            "name": "Thread Necklace",
+            "price": 89,
+            "imageUrl": "https://images.example.com/jewelry/thread-necklace.jpg",
+            "why": "Delicate 14k gold-fill thread — effortless layering for any neckline."
+          },
+          {
+            "id": "bar-pendant",
+            "name": "Bar Pendant",
+            "price": 124,
+            "imageUrl": "https://images.example.com/jewelry/bar-pendant.jpg",
+            "why": "Clean horizontal bar in her choice of finish — a modern everyday staple."
+          },
+          {
+            "id": "open-cuff",
+            "name": "Open Cuff",
+            "price": 142,
+            "imageUrl": "https://images.example.com/jewelry/open-cuff.jpg",
+            "why": "Sculptural open cuff that fits most wrists — minimal yet eye-catching."
+          }
+        ],
+        "action": {"name": "card-grid"}
+      }
     }
-  ]
+  }
 }

@@ -49,7 +49,7 @@ actual fun A2uiWebContent(
     isSheet: Boolean,
     modifier: Modifier,
 ) {
-    val payload = fragments.lastOrNull()?.toString().orEmpty()
+    val payload = fragmentsAsJsArray(fragments)
     val pageReady by bridge.pageReady.collectAsState()
 
     // Build self-contained HTML by inlining a2ui-host.js
@@ -138,12 +138,12 @@ actual fun A2uiWebContent(
         webView.loadHTMLString(html, baseURL = null)
     }
 
-    // Render payload once the page signals it's ready (didFinishNavigation).
+    // Ingest payload once the page signals it's ready (didFinishNavigation).
     // At that point window.AndroidBridge and window.a2ui are both defined.
     LaunchedEffect(pageReady, payload) {
         if (pageReady && payload.isNotEmpty()) {
             webView.evaluateJavaScript(
-                "window.a2ui.applyTheme(${ThemeTokens.asJson()});window.a2ui.render($payload);",
+                "window.a2ui.applyTheme(${ThemeTokens.asJson()});window.a2ui.ingest($payload);",
                 null,
             )
         }
@@ -154,8 +154,17 @@ actual fun A2uiWebContent(
         modifier = modifier,
         update = { wv ->
             if (pageReady && payload.isNotEmpty()) {
-                wv.evaluateJavaScript("window.a2ui.render($payload);", null)
+                wv.evaluateJavaScript("window.a2ui.reset(); window.a2ui.ingest($payload);", null)
             }
         },
     )
+}
+
+/**
+ * Serialise the per-bubble fragment list as a JS-array literal suitable for
+ * ``window.a2ui.ingest(...)``. Empty list → "" so callers can guard.
+ */
+private fun fragmentsAsJsArray(fragments: List<JsonObject>): String {
+    if (fragments.isEmpty()) return ""
+    return fragments.joinToString(prefix = "[", postfix = "]", separator = ",") { it.toString() }
 }

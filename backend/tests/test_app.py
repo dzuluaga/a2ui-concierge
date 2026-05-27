@@ -19,7 +19,24 @@ class _FakeAgent:
         self.history = []
     async def turn(self, _msg):
         yield AgentEvent("text", "Three picks coming up.")
-        yield AgentEvent("a2ui", {"component": "chip-group", "options": []})
+        # v0.8 wire: surface plus begin pair carrying a single ChipGroup
+        # root in the custom Lumen catalog.
+        yield AgentEvent("a2ui", {"surfaceUpdate": {
+            "surfaceId": "s-fake",
+            "components": [{
+                "id": "c-1",
+                "component": {"ChipGroup": {
+                    "options": [],
+                    "selections": {"literalArray": []},
+                    "maxAllowedSelections": 1,
+                    "variant": "chips",
+                }},
+            }],
+        }})
+        yield AgentEvent("a2ui", {"beginRendering": {
+            "surfaceId": "s-fake", "root": "c-1",
+            "catalogId": "lumen.com:concierge/v1",
+        }})
         yield AgentEvent("end", None)
 
 

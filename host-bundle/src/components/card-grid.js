@@ -1,10 +1,15 @@
 import { LitElement, html, css } from "lit";
 
+// v0.8 custom-catalog component "CardGrid". Each item carries the
+// camelCased fields the spec catalog declares (imageUrl, salePrice, ...).
+// Selection fires an `a2ui-action` event; the shim wraps it in a v0.8
+// userAction envelope.
 export class CardGrid extends LitElement {
   static properties = {
     section: {},
     reasoning: {},
     items: { type: Array },
+    action: { type: Object },
   };
   static styles = css`
     :host { display: block; font-family: var(--a2ui-font-sans); }
@@ -21,19 +26,13 @@ export class CardGrid extends LitElement {
       display: flex; gap: 10px;
       overflow-x: auto; overflow-y: hidden;
       -webkit-overflow-scrolling: touch;
-      /* proximity (not mandatory) — a half-flick lands on the nearest snap
-         instead of rubber-banding hard back; preserves momentum. */
       scroll-snap-type: x proximity;
       scroll-snap-stop: always;
       scroll-padding-inline: 12px;
       padding: 4px 12px 8px;
       margin: 0;
       scrollbar-width: none;
-      /* Tell the browser this region is for horizontal panning so the parent
-         LazyColumn's vertical-scroll handler doesn't fight the carousel
-         swipes (and vertical drags still bubble up to it). */
       touch-action: pan-x;
-      /* Don't let overscroll bubble to the parent and yank the whole list. */
       overscroll-behavior-x: contain;
     }
     .rail::-webkit-scrollbar { display: none; }
@@ -48,7 +47,6 @@ export class CardGrid extends LitElement {
     .card img {
       width: 100%; height: 132px; object-fit: cover; display: block;
       background: #f4efe6;
-      /* Stop image drag-and-drop from cancelling the pan gesture mid-flick. */
       pointer-events: none;
       user-select: none;
       -webkit-user-drag: none;
@@ -81,20 +79,25 @@ export class CardGrid extends LitElement {
     }
     .why { color: #6b6973; font-size: 12px; margin-top: 6px; line-height: 1.3; }
   `;
+  constructor() {
+    super();
+    this.items = [];
+    this.action = { name: "card-grid" };
+  }
   render() {
     return html`
       ${this.section ? html`<div class="section">${this.section}</div>` : null}
       ${this.reasoning ? html`<div class="reason">${this.reasoning}</div>` : null}
       <div class="rail">
         ${this.items.map(p => {
-          const onSale = p.sale_price != null && p.sale_price < p.price;
+          const onSale = p.salePrice != null && p.salePrice < p.price;
           return html`
             <div class="card" @click=${() => this._tap(p)}>
-              <img src=${p.image_url} alt=${p.name}>
+              <img src=${p.imageUrl} alt=${p.name}>
               <div class="body">
                 <div class="name">${p.name}</div>
                 <div class="price-row">
-                  <span class="price ${onSale ? "sale" : ""}">$${onSale ? p.sale_price : p.price}</span>
+                  <span class="price ${onSale ? "sale" : ""}">$${onSale ? p.salePrice : p.price}</span>
                   ${onSale ? html`<span class="price-orig">$${p.price}</span>` : null}
                 </div>
                 ${p.vendor ? html`<div class="vendor">${p.vendor}</div>` : null}
@@ -107,7 +110,13 @@ export class CardGrid extends LitElement {
     `;
   }
   _tap(p) {
-    window.AndroidBridge?.onAction(JSON.stringify({ component: "card-grid", product_id: p.id, name: p.name }));
+    this.dispatchEvent(new CustomEvent("a2ui-action", {
+      bubbles: true, composed: true,
+      detail: {
+        name: this.action?.name || "card-grid",
+        context: { product_id: p.id, name: p.name },
+      },
+    }));
   }
 }
 customElements.define("a2ui-card-grid", CardGrid);

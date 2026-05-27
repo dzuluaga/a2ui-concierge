@@ -1,335 +1,284 @@
-# A2UI JSON Shapes — Five Demo Surfaces
+# A2UI v0.8 Wire Shapes — Lumen Concierge
 
-This document records the canonical JSON shape for each of the five A2UI surfaces
-used in the Gift Concierge demo. It distinguishes what comes directly from the
-upstream A2UI v0.8 standard-catalog spec from what is our own application-level
-extension/invention.
+This project speaks the **A2UI v0.8** protocol. Every agent bubble is a
+self-contained A2UI **surface**, transmitted as a `surfaceUpdate` followed
+by a `beginRendering` and (when the user closes a transient sheet) a
+`deleteSurface`.
 
-**Source consulted:** `https://raw.githubusercontent.com/google/A2UI/main/specification/v0_8/json/standard_catalog_definition.json`
-(fetched 2026-05-07). The v0.8 specification is closed / stable (v0.8.2).
+The demo uses **two catalogs**:
 
----
+* **Standard v0.8 catalog**
+  (`https://a2ui.org/specification/v0_8/standard_catalog_definition.json`)
+  — used by `chips`, `form`, `confirmation`, `tx_detail`. These bubbles
+  are graphs of standard primitives (`Text`, `Image`, `Row`, `Column`,
+  `Card`, `Button`, `CheckBox`, `TextField`, `MultipleChoice`).
+* **Custom catalog `lumen.com:concierge/v1`** — used by `products`
+  (`CardGrid`), `product_detail` (`ProductDetail`), and `payment_challenge`
+  (`PaymentChallenge`). These bundle interaction logic the standard
+  primitives can't express (image carousel, embedded x402 signing flow).
 
-## Background: A2UI v0.8 Protocol vs. Our Application Envelope
-
-The A2UI v0.8 wire format wraps components inside a `surfaceUpdate` message:
-
-```json
-{
-  "surfaceUpdate": {
-    "surfaceId": "string",
-    "components": [
-      { "id": "comp-1", "component": { "MultipleChoice": { ... } } }
-    ]
-  }
-}
-```
-
-The fixtures in `backend/tests/fixtures/` are **not** raw wire messages.
-They represent the **application-level payload** that our Python serializers
-(`backend/src/concierge/a2ui.py`) produce and that the Lit web components
-(`host-bundle/src/components/`) consume. This is a deliberate simplification:
-the Android WebView shim owns the `surfaceUpdate` wrapper; the serializers only
-need to produce the inner payload dict.
-
-**Anything tagged [SPEC]** below is directly grounded in the v0.8 standard
-catalog. **Anything tagged [EXTENSION]** is an invention (no direct v0.8
-equivalent) — documented here so Task A4 and Task B2 authors know the
-design rationale.
+**Source consulted:**
+- `https://a2ui.org/specification/v0.8-a2ui` — spec overview
+- `https://a2ui.org/specification/v0_8/standard_catalog_definition.json`
+- `https://raw.githubusercontent.com/google/A2UI/main/specification/v0_8/json/server_to_client.json`
+- `https://raw.githubusercontent.com/google/A2UI/main/specification/v0_8/json/client_to_server.json`
+- `https://raw.githubusercontent.com/google/A2UI/main/specification/v0_8/json/catalog_description_schema.json`
 
 ---
 
-## Surface 1: Chip Group (single-select)
+## 1. Envelope (server → client)
 
-**Purpose:** Ask the user a single-choice preference question rendered as tappable chips.
+Every A2UI message follows the v0.8 server-to-client schema and contains
+exactly one of `surfaceUpdate`, `dataModelUpdate`, `beginRendering`, or
+`deleteSurface`. Each `/chat` SSE `event: a2ui` frame carries one such
+message — one A2UI message per line, matching the spec's JSONL guidance.
 
-**Closest v0.8 component:** `MultipleChoice` [SPEC] with `variant: "chips"` and
-`maxAllowedSelections: 1`. The v0.8 shape is:
+A typical agent bubble emits **two messages** back-to-back: a
+`surfaceUpdate` carrying the component graph, then a `beginRendering`
+pointing at the root id.
 
-```json
-{
-  "MultipleChoice": {
-    "selections": { "literalArray": [] },
-    "options": [
-      { "label": { "literalString": "Jewelry" }, "value": "jewelry" }
-    ],
-    "maxAllowedSelections": 1,
-    "variant": "chips"
-  }
-}
+```jsonl
+{"surfaceUpdate":{"surfaceId":"s-1d2c3b","components":[
+  {"id":"c-col","component":{"Column":{"children":{"explicitList":["c-q","c-row"]}}}},
+  {"id":"c-q","component":{"Text":{"text":{"literalString":"What does she lean toward?"},"usageHint":"h4"}}},
+  {"id":"c-row","component":{"Row":{"children":{"explicitList":["c-b1"]}}}},
+  {"id":"c-b1","component":{"Button":{"child":"c-b1l","action":{"name":"chip-group","context":[{"key":"value","value":{"literalString":"jewelry"}}]}}}},
+  {"id":"c-b1l","component":{"Text":{"text":{"literalString":"Jewelry"}}}}
+]}}
+{"beginRendering":{"surfaceId":"s-1d2c3b","root":"c-col",
+                    "catalogId":"https://a2ui.org/specification/v0_8/standard_catalog_definition.json"}}
 ```
 
-**Our application envelope** [EXTENSION]: We flatten the nested v0.8 structure
-into a simpler dict. The `question` field has no v0.8 equivalent (v0.8 relies on
-a sibling `Text` component for labels). The `select: "single"` field mirrors
-`maxAllowedSelections: 1` but in our own vocabulary.
+Component-property values follow the spec's **BoundValue** wrapping:
+`{"literalString": "..."}`, `{"literalNumber": 1}`, `{"literalBoolean":
+true}`, `{"literalArray": []}`, or `{"path": "/cart/total"}` for live
+data-model references.
 
-**Fixture:** `backend/tests/fixtures/a2ui_chips.json`
+`children` on container components (`Row`, `Column`, `List`) is either
+`{"explicitList": [id, ...]}` (used everywhere here) or
+`{"template": {componentId, dataBinding}}` (not yet emitted by any
+builder).
+
+Producer: `backend/src/concierge/a2ui.py`. Each builder returns
+`list[dict]` — a (surfaceUpdate, beginRendering) pair.
+
+Consumers:
+- `host-bundle/src/shim.js` (Android WebView) — `window.a2ui.ingest(msg)`
+  buffers `surfaceUpdate` frames per `surfaceId`, dispatches based on
+  `beginRendering.catalogId`, resolves BoundValues against the surface
+  data model, and mounts either a standard primitive (plain HTML) or a
+  custom Lit element under `#a2ui-root`.
+- `host-bundle/index.html` (web app) — identical interpreter, mounted
+  per-bubble.
+
+## 2. Standard catalog surfaces
+
+Built with `Text`, `Image`, `Row`, `Column`, `Card`, `Button`,
+`CheckBox`, `TextField`, `MultipleChoice` from the v0.8 standard catalog.
+The Python builders compose them into adjacency-list graphs.
+
+### 2.1 Chips (`a2ui.chips`)
+
+`Column { Text(question), Row { Button(option1), Button(option2), ... } }`.
+Each chip is a `Button`; tapping it fires the `chip-group` action with
+the chip's value as a literal `BoundValue` in `action.context`. Result:
+one-tap selection, fully spec-conformant.
+
+### 2.2 Form (`a2ui.form`)
+
+`Column { ...field components..., Button("Place order") }`. Field types
+map to standard primitives:
+
+| Demo field | Standard component                          |
+|------------|---------------------------------------------|
+| `toggle`   | `CheckBox` with `value: {path: "/<name>"}`  |
+| `text`     | `TextField` (longText) with `text: {path}`  |
+| `address`  | `TextField` (shortText) with `text: {path}` |
+
+Each input two-way binds to a path in the surface data model. The submit
+button's action has `context: [{key: "values", value: {path: "/"}}]` so
+the agent receives the whole data-model object as `values`.
+
+### 2.3 Confirmation (`a2ui.confirmation`)
+
+`Card { Column { Text(title), Row(label, amount) × N, Text(total),
+Text(shipDate), Button("View transaction") } }`. The Button's action is
+`tx-detail-open` with the order id, tx hash, ship date, total, and
+explorer url encoded as literal context entries. The host treats that
+action as the marker that a confirmation surface has arrived (used for
+haptic + entrance animation).
+
+### 2.4 Transaction detail (`a2ui.tx_detail`)
+
+`Card { Column { Text("Transaction details"), Row(label, value) × N,
+Button("Close"), Button("Open in explorer") } }`. The Android host also
+synthesises the same shape client-side (`ChatViewModel.buildTxDetailSurface`)
+when the user taps "View transaction" — no server round-trip needed.
+
+## 3. Custom catalog `lumen.com:concierge/v1`
+
+Three composite components remain custom because the standard primitives
+don't capture their interaction model.
+
+### 3.1 CardGrid
 
 ```json
-{
-  "component": "chip-group",
-  "question": "What does she lean toward?",
-  "select": "single",
-  "options": [
-    { "value": "jewelry",    "label": "Jewelry" },
-    { "value": "home",       "label": "Home" },
-    { "value": "stationery", "label": "Stationery" },
-    { "value": "skincare",   "label": "Skincare" }
-  ]
-}
-```
-
-**Field reference:**
-
-| Field       | Type             | Origin      | Notes                                      |
-|-------------|------------------|-------------|--------------------------------------------|
-| `component` | string literal   | [EXTENSION] | Discriminator; value `"chip-group"`        |
-| `question`  | string           | [EXTENSION] | Prompt text rendered above the chips       |
-| `select`    | `"single"`       | [EXTENSION] | Maps to v0.8 `maxAllowedSelections: 1`     |
-| `options[]` | array of objects | [SPEC]      | Each item has `value` (string) + `label` (string); mirrors v0.8 `MultipleChoice.options` |
-
-**Unknowns/gaps:** v0.8 does not define a combined question+chips component.
-An "address autocomplete" chip variant is also absent from v0.8; not needed here.
-
----
-
-## Surface 2: Card Grid (product picks)
-
-**Purpose:** Display a scrollable grid of product cards, each with an image,
-name, price, and a short "why" rationale.
-
-**Closest v0.8 component:** No direct v0.8 equivalent [EXTENSION]. The closest
-v0.8 primitives would be a `List` of `Card` components, each wrapping a
-`Column` of `Image` + `Text` children. However, that requires multiple component
-IDs and a data-model binding — too verbose for our single-payload model.
-
-**Our application envelope** [EXTENSION]: A flat `card-grid` payload with an
-`items` array. Each item carries `id`, `name`, `price`, `image_url`, and `why`.
-The Lit component (`host-bundle/src/components/card-grid.js`) handles layout.
-
-**Fixture:** `backend/tests/fixtures/a2ui_products.json`
-
-```json
-{
-  "component": "card-grid",
-  "reasoning": "Three minimalist jewelry pieces that pair elegance with everyday wear.",
+{"CardGrid": {
+  "section":   {"literalString": "Quietly Romantic"},
+  "reasoning": {"literalString": "Three minimalist picks…"},
   "items": [
-    {
-      "id": "thread-necklace",
-      "name": "Thread Necklace",
-      "price": 89,
-      "image_url": "https://images.example.com/jewelry/thread-necklace.jpg",
-      "why": "Delicate 14k gold-fill thread — effortless layering for any neckline."
-    },
-    {
-      "id": "bar-pendant",
-      "name": "Bar Pendant",
-      "price": 124,
-      "image_url": "https://images.example.com/jewelry/bar-pendant.jpg",
-      "why": "Clean horizontal bar in her choice of finish — a modern everyday staple."
-    },
-    {
-      "id": "open-cuff",
-      "name": "Open Cuff",
-      "price": 142,
-      "image_url": "https://images.example.com/jewelry/open-cuff.jpg",
-      "why": "Sculptural open cuff that fits most wrists — minimal yet eye-catching."
-    }
-  ]
-}
-```
-
-**Field reference:**
-
-| Field           | Type             | Origin      | Notes                                           |
-|-----------------|------------------|-------------|-------------------------------------------------|
-| `component`     | string literal   | [EXTENSION] | Discriminator; value `"card-grid"`              |
-| `reasoning`     | string           | [EXTENSION] | Agent's narrative; displayed above the grid     |
-| `items[]`       | array of objects | [EXTENSION] | One entry per product pick                      |
-| `items[].id`    | string           | [EXTENSION] | Stable product identifier                       |
-| `items[].name`  | string           | [EXTENSION] | Display name                                    |
-| `items[].price` | number (integer) | [EXTENSION] | Price in USD cents-free integer                 |
-| `items[].image_url` | string (URL) | [EXTENSION] | Product image; maps to v0.8 `Image.url.literalString` |
-| `items[].why`   | string           | [EXTENSION] | One-sentence rationale from the agent           |
-
----
-
-## Surface 3: Product Detail (with variant pickers)
-
-**Purpose:** Show a single product with image, name, price, and one or more
-radio-style variant groups (e.g., finish and length).
-
-**Closest v0.8 component:** No direct v0.8 equivalent [EXTENSION]. v0.8 offers
-`MultipleChoice` for each variant group, but combining product display with
-multiple pickers requires compositing several named components — again too
-verbose for our envelope model.
-
-**Our application envelope** [EXTENSION]: A `product-detail` payload that embeds
-the product as a sub-object and lists `variant_groups` as an array. Each group
-has a `name`, a flat `options` string array, and `select: "single"`.
-
-**Fixture:** `backend/tests/fixtures/a2ui_product_detail.json`
-
-```json
-{
-  "component": "product-detail",
-  "product": {
-    "id": "bar-pendant",
-    "name": "Bar Pendant",
-    "price": 124,
-    "image_url": "https://images.example.com/jewelry/bar-pendant.jpg"
-  },
-  "variant_groups": [
-    {
-      "name": "finish",
-      "options": ["gold", "silver", "rose gold"],
-      "select": "single"
-    },
-    {
-      "name": "length",
-      "options": ["16\"", "18\""],
-      "select": "single"
-    }
-  ]
-}
-```
-
-**Field reference:**
-
-| Field                          | Type             | Origin      | Notes                                                   |
-|--------------------------------|------------------|-------------|---------------------------------------------------------|
-| `component`                    | string literal   | [EXTENSION] | Discriminator; value `"product-detail"`                 |
-| `product.id`                   | string           | [EXTENSION] | Stable product identifier                               |
-| `product.name`                 | string           | [EXTENSION] | Display name                                            |
-| `product.price`                | number (integer) | [EXTENSION] | Price in USD integer                                    |
-| `product.image_url`            | string (URL)     | [EXTENSION] | Product image                                           |
-| `variant_groups[]`             | array of objects | [EXTENSION] | One entry per variant dimension                         |
-| `variant_groups[].name`        | string           | [EXTENSION] | Dimension identifier and label (e.g., `"finish"`)       |
-| `variant_groups[].options`     | array of strings | [EXTENSION] | Available choices; maps to v0.8 `MultipleChoice.options[].value` |
-| `variant_groups[].select`      | `"single"`       | [EXTENSION] | Exactly one selection required                          |
-
----
-
-## Surface 4: Form (gift options)
-
-**Purpose:** Collect gift-wrap preference (toggle), an optional gift note (text),
-and a shipping address (address field) in a single scrollable form bubble.
-
-**Closest v0.8 components:**
-- Toggle/switch → `CheckBox` [SPEC]: v0.8 has `CheckBox` with boolean `value`.
-  We map our `type: "toggle"` to this semantics.
-- Text input → `TextField` [SPEC]: v0.8 `TextField` with `textFieldType: "shortText"`
-  or `"longText"`. We add `max_length` as an extension attribute.
-- Address field → No v0.8 equivalent [EXTENSION]. v0.8 has `TextField` but no
-  address-aware type. We use `type: "address"` as an extension; the Lit component
-  falls back to a plain multi-line text input if no native address picker is
-  available.
-
-**Our application envelope** [EXTENSION]: A `form` payload with a flat `fields`
-array. Each field has `type`, `name`, and `label`. The `toggle` and `text` types
-are grounded in v0.8 primitives; `address` is a pure extension.
-
-**Fixture:** `backend/tests/fixtures/a2ui_form.json`
-
-```json
-{
-  "component": "form",
-  "fields": [
-    {
-      "type": "toggle",
-      "name": "gift_wrap",
-      "label": "Gift wrap (+$8)"
-    },
-    {
-      "type": "text",
-      "name": "note",
-      "label": "Gift note",
-      "max_length": 120
-    },
-    {
-      "type": "address",
-      "name": "ship_to",
-      "label": "Ship to"
-    }
-  ]
-}
-```
-
-**Field reference:**
-
-| Field                   | Type           | Origin      | Notes                                                              |
-|-------------------------|----------------|-------------|--------------------------------------------------------------------|
-| `component`             | string literal | [EXTENSION] | Discriminator; value `"form"`                                      |
-| `fields[]`              | array          | [EXTENSION] | Ordered list of form controls                                      |
-| `fields[].type`         | string enum    | [EXTENSION] | `"toggle"` (→ v0.8 CheckBox), `"text"` (→ v0.8 TextField), `"address"` (pure extension) |
-| `fields[].name`         | string         | [EXTENSION] | Machine name; used as key in submitted values dict                 |
-| `fields[].label`        | string         | [SPEC-ish]  | Display label; mirrors v0.8 `CheckBox.label` / `TextField.label`  |
-| `fields[].max_length`   | integer (opt.) | [EXTENSION] | Only for `type: "text"`; no v0.8 equivalent                       |
-
-**Gap — address field:** v0.8 does not define an address-aware input.
-Our `type: "address"` is a forward-compatible extension. If a future A2UI
-version adds a native address component, the `type` value can be updated without
-changing the rest of the shape.
-
----
-
-## Surface 5: Confirmation Card
-
-**Purpose:** Show a read-only order summary after checkout: order ID, line items
-with amounts, total, and estimated ship date.
-
-**Closest v0.8 component:** No direct v0.8 equivalent [EXTENSION]. The closest
-v0.8 approach would be a `Card` wrapping a `Column` of `Text` + `Divider` +
-`Row` components with data-model bindings — overly verbose for a static summary.
-
-**Our application envelope** [EXTENSION]: A `confirmation-card` payload that
-carries all order details as flat fields. The `items` array replaces v0.8's
-`List`+`Row` pattern with a simple label/amount pair.
-
-**Fixture:** `backend/tests/fixtures/a2ui_confirmation.json`
-
-```json
-{
-  "component": "confirmation-card",
-  "order_id": "A2UI-7741",
-  "items": [
-    { "label": "Bar Pendant · Silver · 16\"", "amount": 124 },
-    { "label": "Gift wrap",                   "amount": 8 }
+    {"id": "bar-pendant", "name": "Bar Pendant", "price": 124,
+     "salePrice": null, "vendor": "Lumen Goods",
+     "imageUrl": "https://…", "why": "Clean horizontal bar…"}
   ],
-  "total": 132,
-  "ship_date": "Mon, May 11"
-}
+  "action": {"name": "card-grid"}
+}}
 ```
 
-**Field reference:**
+Horizontal product rail with vendor styling and per-card "why" reason.
+A standard-catalog equivalent would be `List(direction: horizontal)` of
+`Card { Column { Image, Text, Text, Text } }`, but loses the rail's
+flush-edge scroll layout and per-item "why" formatting.
 
-| Field           | Type             | Origin      | Notes                                             |
-|-----------------|------------------|-------------|---------------------------------------------------|
-| `component`     | string literal   | [EXTENSION] | Discriminator; value `"confirmation-card"`        |
-| `order_id`      | string           | [EXTENSION] | Human-readable order reference (e.g., `A2UI-7741`) |
-| `items[]`       | array of objects | [EXTENSION] | Line items in the order summary                   |
-| `items[].label` | string           | [EXTENSION] | Human-readable line-item description              |
-| `items[].amount`| number (integer) | [EXTENSION] | Line-item price in USD integer                    |
-| `total`         | number (integer) | [EXTENSION] | Sum of all `items[].amount` values                |
-| `ship_date`     | string           | [EXTENSION] | Formatted estimated delivery date (e.g., `"Mon, May 11"`) |
+### 3.2 ProductDetail
 
----
+```json
+{"ProductDetail": {
+  "product": { "id": "...", "name": "...", "price": 124, "salePrice": null,
+               "vendor": "...", "inStock": true,
+               "imageUrl": "...", "images": ["..."], "description": "..." },
+  "variantGroups": [
+    {"name": "finish", "options": ["gold", "silver"], "select": "single"}
+  ],
+  "requiresAgeVerification": {"literalBoolean": false},
+  "action": {"name": "product-detail"}
+}}
+```
 
-## Summary: What Comes from the Spec vs. What We Invented
+Modal sheet with image carousel, paired variant pickers (disabled-state
+logic for out-of-stock combinations), and a primary CTA. Variant
+grouping with cross-disabling isn't expressible via standard
+`MultipleChoice` alone.
 
-| Surface            | v0.8 Grounding                             | Extensions                                           |
-|--------------------|---------------------------------------------|------------------------------------------------------|
-| Chip group         | `MultipleChoice` (variant: chips, max: 1)  | `component`, `question`, `select` field name         |
-| Card grid          | None (would need List+Card+Column+Image+Text) | Entire shape is an extension                       |
-| Product detail     | `MultipleChoice` per variant group          | Entire envelope; `product` sub-object; `variant_groups` array |
-| Form               | `CheckBox` (toggle), `TextField` (text)    | `component`, `name` field; `type: "address"` field  |
-| Confirmation card  | None (would need Card+Column+Text+Divider)  | Entire shape is an extension                        |
+### 3.3 PaymentChallenge
 
-The v0.8 standard catalog defines 16 primitive components (Text, Image, Icon,
-Video, AudioPlayer, Row, Column, List, Card, Tabs, Divider, Modal, Button,
-CheckBox, TextField, DateTimeInput, MultipleChoice, Slider). It does not define
-higher-level commerce components (chip-group, card-grid, product-detail, form,
-confirmation-card). All five of our surface types are **custom components** in
-the A2UI terminology — they are an application-level extension layer on top of
-the v0.8 primitives.
+```json
+{"PaymentChallenge": {
+  "orderId": "A2UI-7741",
+  "label":   {"literalString": "Lumen Goods — Bar Pendant"},
+  "amountDisplay": {"literalString": "$132.00"},
+  "items":   [ /* line items */ ],
+  "challenge": { /* unsigned EIP-3009 challenge */ },
+  "requiresAgeVerification": {"literalBoolean": true},
+  "ageDcqlQueryJson":     {"literalString": "{...}"},
+  "dpcDcqlQueryJson":     {"literalString": "{...}"},
+  "loyaltyDiscountPct":   10,
+  "loyaltyDcqlQueryJson": {"literalString": "{...}"},
+  "action": {"name": "payment-challenge"}
+}}
+```
+
+The x402 payment sheet. `challenge` is an opaque EIP-3009 transfer-with-authorization
+struct that the Android wallet signs in StrongBox; DCQL query JSON is
+shipped as a literal string so the Credential Manager call doesn't
+double-encode it. None of this fits standard primitives.
+
+## 4. Client → server: `userAction` envelope
+
+User interactions bubble up as `a2ui-action` `CustomEvent`s; the shim
+wraps each into the v0.8 client-to-server `userAction` envelope:
+
+```json
+{"userAction": {
+  "name": "chip-group",
+  "surfaceId": "s-1d2c3b",
+  "sourceComponentId": "c-b1",
+  "timestamp": "2026-05-20T18:42:11.043Z",
+  "context": {"value": "jewelry"}
+}}
+```
+
+For standard-catalog `Button`s the `context` keys come from
+`action.context[].key` and the values are resolved from BoundValues
+(literals or data-model `path`s) **at click time**, so the user's latest
+input is captured.
+
+Both the Android `ChatViewModel.extractUserAction()` and the web
+`handleUserAction()` translate this envelope into the legacy
+`[ui-action] {component: "<name>", ...context}` string the agent's
+prompts (`backend/src/concierge/prompts.py`) still consume. The
+translation is a thin compatibility shim — the wire format is fully
+v0.8.
+
+Pure UI dismissals (`*-close`) are intercepted at the bridge and never
+sent to the agent.
+
+## 5. Data binding and the BoundValue resolver
+
+The shim's `resolveValue` walks each component's props and substitutes:
+
+| Shape                                | Resolves to                |
+|--------------------------------------|----------------------------|
+| `{"literalString": "x"}`             | the string `"x"`           |
+| `{"literalNumber": 1}`               | the number `1`             |
+| `{"literalBoolean": true}`           | `true`                     |
+| `{"literalArray": ["a", "b"]}`       | the array                  |
+| `{"path": "/cart/total"}`            | `surface.dataModel.cart.total` |
+
+Nested objects and arrays are walked recursively. Standard-catalog input
+components (`TextField`, `CheckBox`, `MultipleChoice`) treat their bound
+prop specially: the renderer reads the path's current value to seed the
+control and registers an input handler that writes back to the same
+path. `Button.action.context` items are resolved **at click time** so
+the userAction envelope carries the user's latest edits.
+
+`dataModelUpdate` messages patch the surface's data model and re-render
+any bound props; the demo currently emits a fresh surface per turn, so
+this path is exercised only when a future flow needs incremental updates
+(e.g. live price ticks).
+
+## 6. Lifecycle summary
+
+```
+agent.turn() yields AgentEvent("a2ui", msg)
+    │  one v0.8 message per yield
+    ▼
+app.py    → SSE event: a2ui  data: <single v0.8 message>
+    │
+    ├─→ Android: SseClient → ChatViewModel.handleA2uiMessage
+    │     • buffer surfaceUpdate frames by surfaceId
+    │     • commit a chat bubble (or open a modal sheet) on beginRendering
+    │     • AgentA2uiBubble replays the frame list through
+    │       window.a2ui.ingest()
+    │
+    └─→ Web: SSE parser in index.html
+          • ingest() → mountSurfaceBubble() on beginRendering
+          • a2ui-action listener wraps interactions into userAction
+            envelopes, translates to legacy [ui-action] payloads, then
+            POSTs the next /chat turn
+```
+
+## 7. Adding a new bubble
+
+**Prefer the standard catalog.** If a layout can be composed from `Text`,
+`Image`, `Row`, `Column`, `Card`, `Button`, `CheckBox`, `TextField`, and
+`MultipleChoice`:
+
+1. Write a builder in `backend/src/concierge/a2ui.py` that returns a
+   `(surfaceUpdate, beginRendering)` pair tagged with
+   `STANDARD_CATALOG_ID`. Use the `_std_*` helpers and `_std_surface()`.
+2. The shim's `instantiateStandard` already renders the primitives;
+   nothing else to wire.
+3. Add an entry under §2 of this doc.
+
+**Fall back to the custom catalog** only when interactions can't be
+expressed in the standard catalog (e.g. embedded wallet signing,
+custom-disabled variant pickers):
+
+1. Write a builder that emits a single root component in the custom
+   catalog (still wrapped via `_wrap_surface`).
+2. Register the type in `COMPONENT_TAG` in both `host-bundle/src/shim.js`
+   and `host-bundle/index.html`.
+3. Author a Lit element under `host-bundle/src/components/` that fires
+   `a2ui-action` events for any user interactions.
+4. Add an entry under §3 of this doc.
