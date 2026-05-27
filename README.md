@@ -1,10 +1,17 @@
 # A2UI Concierge
 
-A demo of the **A2UI** protocol running side-by-side on **Android** (Kotlin / Jetpack Compose
-chrome + WebView-hosted Lit components) and **the web** (the same Lit components, no
-hybrid). A streaming Python backend (Anthropic Claude Sonnet 4.6 + tool use) drives both
-clients with the exact same A2UI fragments — so every UI you see was authored once and
-rendered identically on both platforms.
+A demo of **A2UI-inspired** agent-driven UI running side-by-side on **Android** (Kotlin /
+Jetpack Compose chrome + WebView-hosted Lit components) and **the web** (the same Lit
+components, no hybrid). A streaming Python backend (Anthropic Claude Sonnet 4.6 + tool
+use) drives both clients with the exact same JSON fragments — so every UI you see was
+authored once and rendered identically on both platforms.
+
+> **On conformance:** This repo is *inspired by* Google's [A2UI v0.8 spec](https://github.com/google/A2UI),
+> not a strict implementation of it. We use a flattened application envelope (`{component, ...}`)
+> rather than v0.8's `surfaceUpdate` wire format, and 4 of our 7 components (`product-detail`,
+> `payment-challenge`, `confirmation-card`, `tx-detail`) have no v0.8 catalog equivalent —
+> they're application-level extensions. See [docs/a2ui-shapes.md](docs/a2ui-shapes.md)
+> for per-surface `[SPEC]` vs `[EXTENSION]` tagging.
 
 The use case is a "Lumen Concierge" gift-shopping flow: the agent picks products, asks
 clarifying questions, places an order, and confirms — all via streamed A2UI components, not
